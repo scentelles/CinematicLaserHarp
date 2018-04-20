@@ -4,18 +4,24 @@
 
 OSCManager::OSCManager()
 {
-  outIP = new IPAddress(192,168,1,51);        // remote IP of your computer
-  outPort = 8000;          // remote port to receive OSC
-  localPort = 8888;        // local port to listen for OSC packets (actually not used for sending)
+  outIP_ = new IPAddress(192,168,1,51);        // remote IP of your computer
+  outPort_ = 8000;          // remote port to receive OSC
+  localPort_ = 8888;        // local port to listen for OSC packets (actually not used for sending)
 }
 //todo : destructor
 
-
+void OSCManager::setup()
+{
+    Serial.println("Starting UDP");
+    Udp.begin(localPort_);
+    Serial.print("Local port: ");
+    Serial.println(Udp.localPort());  
+}
   void OSCManager::sendOSCMessage(String msg, int parameter){
     OSCMessage OSCmsg(msg.c_str());
     if (parameter >= 0)
           OSCmsg.add(parameter);
-      Udp.beginPacket(*outIP, outPort);
+      Udp.beginPacket(*outIP_, outPort_);
       OSCmsg.send(Udp);
       Udp.endPacket();
       OSCmsg.empty(); 

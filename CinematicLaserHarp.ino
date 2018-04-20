@@ -19,14 +19,12 @@ int currentBeamStatus = 0;
 
 OSCManager myOSCManager;
 Sequencer  mySequencer;
-
 Adafruit_MCP23017 mcp;
-
-// called this way, it uses the default address 0x40
-Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
 #define SERVOMIN  150 // this is the 'minimum' pulse length count (out of 4096)
 #define SERVOMAX  600 // this is the 'maximum' pulse length count (out of 4096)
-// our servo # counter
+
+
 uint8_t servonum = 0;
 #define NB_SERVO 7
 
@@ -35,7 +33,6 @@ uint8_t servonum = 0;
 LiquidCrystal_I2C lcd(LCD_I2C_ADDR,16,2);  // set the LCD for a 16 chars and 2 line display
 
 void setup() {
-  // put your setup code here, to run once:
     Serial.begin(115200);
 
     // Connect to WiFi network
@@ -55,31 +52,31 @@ void setup() {
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
-    Serial.println("Starting UDP");
-    myOSCManager.Udp.begin(myOSCManager.localPort);
-    Serial.print("Local port: ");
-    Serial.println(myOSCManager.Udp.localPort());
 
-//setup IO expander
+    //setup IO expander
     mcp.begin();      // use default address 0
-    mcp.pinMode(0, OUTPUT);
+    for(int i = 0; i < NB_BEAM){
+        mcp.pinMode(i, OUTPUT);
+    }
+    for(int i = 8; i < 8 + NB_BEAM){
+        mcp.pinMode(i, OUTPUT);
+    }
     //mcp.digitalWrite(0, HIGH);
     
-//setup servos
-  pwm.begin();
-  pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
+    //setup servos
+    pwm.begin();
+    pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
 
 
-//setup LCD
-  // initialize the LCD
-  lcd.begin();
+    //setup LCD
+    lcd.begin();
 
-  // Turn on the blacklight and print a message.
-  lcd.backlight();
-  lcd.print("Hello, world!");
+    // Turn on the blacklight and print a message.
+    lcd.backlight();
+    lcd.print("Hello, world!");
 
-//SetupArtnet
-artnet.begin();
+    //SetupArtnet
+    artnet.begin();
 
 
     mySequencer.setupLightSequence();

@@ -12,6 +12,7 @@ class OSCManager
   
   public:
     OSCManager();
+    void setup();
     void sendOSCMessage(String msg, int parameter);
     void sendNote(unsigned int note, unsigned int velocity, int duration);
     void sendCC(unsigned int nb, unsigned int value);

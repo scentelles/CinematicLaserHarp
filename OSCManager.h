@@ -6,9 +6,9 @@ class OSCManager
   public:
     WiFiUDP Udp; 
     // A UDP instance to let us send and receive packets over UDP
-    IPAddress * outIP;
-    int outPort;          // remote port to receive OSC
-    int localPort;        // local port to listen for OSC packets (actually not used for sending)
+    IPAddress * outIP_;
+    int outPort_;          // remote port to receive OSC
+    int localPort_;        // local port to listen for OSC packets (actually not used for sending)
   
   public:
     OSCManager();

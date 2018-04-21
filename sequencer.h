@@ -1,3 +1,7 @@
+#include "BeamFixture.h"
+
+#include <vector>
+
 #define NB_BEAM 7
 
 #define S_IDLE    1
@@ -23,6 +27,7 @@ class Sequencer
   
   public:
   Sequencer();
+  Sequencer(std::vector<BeamFixture> fixtureList);
   void lightSequenceLoop();
   void setFixtureOn(int fixtureId, bool command);
   void moveFixtureToPosition(int fixtureId, int pos);

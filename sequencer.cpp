@@ -1,3 +1,4 @@
+
 #include "sequencer.h"
 
 #include <ESP8266WiFi.h>
@@ -11,9 +12,14 @@
 // beamTargetPositionMap
 //At beginning of step. calculate steps fo smoothly reaching target position
 
+Sequencer::Sequencer(){}
+Sequencer::Sequencer(std::vector<BeamFixture>  fixtureList)
+{
+  //todo : :remove.just for test of inheritance.
+  //fixtureList[0].setInitPosition();
+}
 
-Sequencer::Sequencer()
-{}
+
 void Sequencer::setupLightSequence()
 {
   for(int i = 0; i < NB_BEAM; i++)

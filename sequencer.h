@@ -28,6 +28,7 @@ class Sequencer
   public:
   Sequencer();
   Sequencer(std::vector<BeamFixture> fixtureList);
+  Sequencer(Fixture *fixture);
   void lightSequenceLoop();
   void setFixtureOn(int fixtureId, bool command);
   void moveFixtureToPosition(int fixtureId, int pos);

@@ -16,7 +16,7 @@ void BeamFixture::setPosition(int value)
 void BeamFixture::setInitPosition()
 {
   position_ = 0;
-  //Serial.println("BEAM INIT POSITION CALLED=======================================================");
+  Serial.println("BEAM INIT POSITION CALLEDFROM BEAMFIXTURE=======================================================");
   // setPosition with offset
 }
 void BeamFixture::setPositionOffset(int offset)

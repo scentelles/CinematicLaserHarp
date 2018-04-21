@@ -4,9 +4,11 @@
 class Fixture
 {
   public:
+  int position_ = 0;
+    
   Fixture();
-  virtual void setPosition(int position) = 0;
-  virtual void setInitPosition() = 0;
+  virtual void setPosition(int position);
+  virtual void setInitPosition();
   
 };
 

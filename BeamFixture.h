@@ -5,7 +5,6 @@
 class BeamFixture: public Fixture{
   public:
   bool isOn = false;
-  int position_;
   int positionOffset;
   
   public:

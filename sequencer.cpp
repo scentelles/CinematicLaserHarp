@@ -13,10 +13,13 @@
 //At beginning of step. calculate steps fo smoothly reaching target position
 
 Sequencer::Sequencer(){}
+Sequencer::Sequencer(Fixture * fixture){
+    //todo : :remove.just for test of inheritance.
+  fixture->setInitPosition();
+  }
 Sequencer::Sequencer(std::vector<BeamFixture>  fixtureList)
 {
-  //todo : :remove.just for test of inheritance.
-  //fixtureList[0].setInitPosition();
+
 }
 
 

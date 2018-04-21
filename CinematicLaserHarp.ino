@@ -83,6 +83,7 @@ void setup() {
 
 
    // mySequencer_p = new Sequencer(myLaserHarpFixture.beamVector);
+  // mySequencer_p = new Sequencer((Fixture*)&myLaserHarpFixture.beamVector[0]);
     //mySequencer.setupLightSequence();
     //mySequencer.startLightSequence();
 }

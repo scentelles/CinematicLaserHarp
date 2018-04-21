@@ -5,7 +5,7 @@
 class LaserHarpFixture
 {
   public:
-  std::vector<BeamFixture> beamVector;
+  std::vector<BeamFixture*> beamVector;
   
   public:
   LaserHarpFixture();

@@ -2,13 +2,28 @@
 
 #include "Fixture.h"
 
-  Fixture::Fixture(){}
+  Fixture::Fixture(){
+     
+  }
+
+  Fixture::Fixture(String name){
+      name_ = name; 
+  }
 
 
   void Fixture::setPosition(int position){}
   void Fixture::setInitPosition()
   {
       Serial.println("BEAM INIT POSITION CALLEDFROM BASE FIXTURE=======================================================");
+      position_ = 0;
+  }
+  void Fixture::setOn(bool val)
+  {
+    Serial.print("Turning ON or OFF FIXTURE ");
+    Serial.print(name_);
+    Serial.print(" : ");
+    Serial.println(val);
+    statusOn_ = val;  
   }
   
 

@@ -13,32 +13,34 @@
 //At beginning of step. calculate steps fo smoothly reaching target position
 
 Sequencer::Sequencer(){}
-Sequencer::Sequencer(Fixture * fixture){
-    //todo : :remove.just for test of inheritance.
-  fixture->setInitPosition();
-  }
-Sequencer::Sequencer(std::vector<BeamFixture>  fixtureList)
+  
+Sequencer::Sequencer(std::vector<Fixture*> *  fixtureVector_p)
 {
+   fixtureVector_ = fixtureVector_p;
 
 }
 
+void Sequencer::addStepDefinition()
+{
+  
+}
 
 void Sequencer::setupLightSequence()
 {
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][0] = 127;
+    sequenceBeamPosTarget[i][0] = 120;
     sequenceBeamLightTarget[i][0] = 1;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][1] = -127;
-    sequenceBeamLightTarget[i][0] = 0;
+    sequenceBeamPosTarget[i][1] = 0;
+    sequenceBeamLightTarget[i][1] = 0;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][2] = 0;
-    sequenceBeamLightTarget[i][0] = 1;
+    sequenceBeamPosTarget[i][2] = 70;
+    sequenceBeamLightTarget[i][2] = 1;
   }
 }
 
@@ -75,7 +77,7 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
   //set on/off state of the fixture at beginning of the step
   for(int i = 0; i < NB_BEAM; i++)
   {
-    setFixtureOn(i, sequenceBeamLightTarget[stepId]) ;
+    setFixtureOn(i, sequenceBeamLightTarget[i][stepId]) ;
   }
 
   
@@ -90,8 +92,24 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
   nbInnerStep_ = 10;
   for(int beamId = 0; beamId < NB_BEAM; beamId++)
   {
+      int currentFixturePosition = (*fixtureVector_)[beamId]->position_;
+      Serial.print("========== CurrentBeamPosition : ");
+      Serial.println(currentFixturePosition);
+
       
-      //innerStepBeamToPositionMap[]
+      int increment = (sequenceBeamPosTarget[beamId][currentLightSequenceStep_] - currentFixturePosition) / nbInnerStep_;
+      Serial.print("========== increment : ");
+      Serial.println(increment);
+            
+      for(int j = 0; j < nbInnerStep_; j++)
+      {//todo : put final target value to avoid rounding delta.
+          int newPos = currentFixturePosition + (increment * (j+1));
+          innerStepBeamToPositionMap[beamId][j] = newPos;
+          Serial.print("========== Setting inner step position : ");
+          Serial.print(j);
+          Serial.print(" : ");
+          Serial.println(newPos);
+      }
   }
   //reset inner step
   currentInnerStep_ = 0;
@@ -105,6 +123,7 @@ void Sequencer::moveFixtureToPosition(int fixtureId, int pos)
     Serial.print(fixtureId);
     Serial.print("to pos : ");
     Serial.println(pos);
+    (*fixtureVector_)[fixtureId]->setPosition(pos);
 
 }
 void Sequencer::setFixtureOn(int fixtureId, bool command)
@@ -121,6 +140,8 @@ void Sequencer::setFixtureOn(int fixtureId, bool command)
       Serial.println(fixtureId);      
     }
 
+    
+    (*fixtureVector_)[fixtureId]->setOn(command);
 
 }
 void Sequencer::lightSequenceLoop()

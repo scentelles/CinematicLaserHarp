@@ -21,14 +21,15 @@ class Sequencer
   int currentLightSequenceStep_ = -1;
   int currentInnerStep_ = -2;
   int lightSequenceNbSteps_ = 3;
-  char innerStepBeamToPositionMap[NB_BEAM][MAX_INNER_STEP];
-  char sequenceBeamPosTarget[NB_BEAM][MAX_STEP];
+  short innerStepBeamToPositionMap[NB_BEAM][MAX_INNER_STEP];
+  short sequenceBeamPosTarget[NB_BEAM][MAX_STEP];
   bool sequenceBeamLightTarget[NB_BEAM][MAX_STEP];
+  std::vector<Fixture*> *  fixtureVector_;
   
   public:
   Sequencer();
-  Sequencer(std::vector<BeamFixture> fixtureList);
-  Sequencer(Fixture *fixture);
+  Sequencer(std::vector<Fixture*> *  fixtureVector_p);
+  void addStepDefinition();
   void lightSequenceLoop();
   void setFixtureOn(int fixtureId, bool command);
   void moveFixtureToPosition(int fixtureId, int pos);

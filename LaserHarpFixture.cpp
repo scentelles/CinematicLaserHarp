@@ -2,14 +2,21 @@
 
 LaserHarpFixture::LaserHarpFixture()
 {
-   beamVector.push_back(new BeamFixture());
-
-  
+    pwm_.begin();
+    pwm_.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
+    
+    beamVector.push_back(new BeamFixture("BEAM_0", &pwm_, 0));
+    beamVector.push_back(new BeamFixture("BEAM_1", &pwm_, 1));
+    beamVector.push_back(new BeamFixture("BEAM_2", &pwm_, 2));
+    beamVector.push_back(new BeamFixture("BEAM_3", &pwm_, 3));
+    beamVector.push_back(new BeamFixture("BEAM_4", &pwm_, 4));
+    beamVector.push_back(new BeamFixture("BEAM_5", &pwm_, 5));
+    beamVector.push_back(new BeamFixture("BEAM_6", &pwm_, 6));
 }
 
 
 
-void LaserHarpFixture::init_beam_position()
+void LaserHarpFixture::setup()
 {
 
     //todo : get from EEPROM

@@ -2,7 +2,7 @@
 
 #include <LiquidCrystal_I2C.h>
 
-#include <Adafruit_PWMServoDriver.h>
+
 
 #include "Adafruit_MCP23017.h"
 
@@ -23,13 +23,7 @@ LaserKeyboard myLaserKeyboard;
 LaserHarpFixture myLaserHarpFixture;
 Sequencer  * mySequencer_p;
 Adafruit_MCP23017 mcp;
-Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
-#define SERVOMIN  150 // this is the 'minimum' pulse length count (out of 4096)
-#define SERVOMAX  600 // this is the 'maximum' pulse length count (out of 4096)
 
-
-uint8_t servonum = 0;
-#define NB_SERVO 7
 
 #define LCD_I2C_ADDR 0x27 // <<—– Mettre votre adresse
 
@@ -38,6 +32,7 @@ LiquidCrystal_I2C lcd(LCD_I2C_ADDR,16,2);  // set the LCD for a 16 chars and 2 l
 void setup() {
     Serial.begin(115200);
 
+    delay(2000);
     // Connect to WiFi network
     Serial.println();
     Serial.println();
@@ -45,10 +40,10 @@ void setup() {
     Serial.println(ssid);
     WiFi.begin(ssid, pass);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+   // while (WiFi.status() != WL_CONNECTED) {
+   //     delay(500);
+   //     Serial.print(".");
+   // }
     Serial.println("");
 
     Serial.println("WiFi connected");
@@ -66,9 +61,7 @@ void setup() {
     }
     //mcp.digitalWrite(0, HIGH);
     
-    //setup servos
-    pwm.begin();
-    pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
+
 
 
     //setup LCD
@@ -81,11 +74,15 @@ void setup() {
     //SetupArtnet
     artnet.begin();
 
+    myLaserHarpFixture.setup();
 
-   // mySequencer_p = new Sequencer(myLaserHarpFixture.beamVector);
-  // mySequencer_p = new Sequencer((Fixture*)&myLaserHarpFixture.beamVector[0]);
-    //mySequencer.setupLightSequence();
-    //mySequencer.startLightSequence();
+    mySequencer_p = new Sequencer((std::vector<Fixture*>*)&(myLaserHarpFixture.beamVector));
+
+    mySequencer_p->setupLightSequence();
+    mySequencer_p->startLightSequence();
+     
+    myLaserKeyboard.setup();
+   
 }
 
 
@@ -100,17 +97,6 @@ void setup() {
 
 
 
-
-
-
-void init_all()
-{
-  myLaserKeyboard.setup();
-  
-
-  myLaserHarpFixture.init_beam_position();
-  
-}
 
 
 
@@ -152,25 +138,13 @@ void ultrasonicLoop()
 void loop() {
 
   myLaserKeyboard.loop();
-//  mySequencer.lightSequenceLoop();
+  mySequencer_p->lightSequenceLoop();
   //displayLoop();
   //ultrasonicLoop();
   //ArtNet input loop
   //artNetLoop();
 
-  Serial.print("Servo num : ");
-  Serial.println(servonum);
-  for (uint16_t pulselen = SERVOMIN; pulselen < SERVOMAX; pulselen++) {
-    pwm.setPWM(servonum, 0, pulselen);
-  }
-  delay(500);
-  for (uint16_t pulselen = SERVOMAX; pulselen > SERVOMIN; pulselen--) {
-    pwm.setPWM(servonum, 0, pulselen);
-  }
-  delay(500);
-  servonum ++;
-  if (servonum >= NB_SERVO) servonum = 0;
 
-  artNetLoop();
+  delay(500);
   
 }

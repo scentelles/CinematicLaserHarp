@@ -17,7 +17,8 @@ Artnet artnet;
 char ssid[] = "SFR_34A8";                   // your network SSID (name)
 char pass[] = "ab4ingrograstanstorc";       // your network password
 
-
+const int sclPin = D1;
+const int sdaPin = D2;
 
 LaserKeyboard myLaserKeyboard;
 LaserHarpFixture myLaserHarpFixture;
@@ -25,14 +26,13 @@ Sequencer  * mySequencer_p;
 Adafruit_MCP23017 mcp;
 
 
-#define LCD_I2C_ADDR 0x27 // <<—– Mettre votre adresse
+#define LCD_I2C_ADDR 0x3F // <<—– Mettre votre adresse
 
 LiquidCrystal_I2C lcd(LCD_I2C_ADDR,16,2);  // set the LCD for a 16 chars and 2 line display
 
 void setup() {
     Serial.begin(115200);
 
-    delay(2000);
     // Connect to WiFi network
     Serial.println();
     Serial.println();
@@ -60,17 +60,22 @@ void setup() {
         mcp.pinMode(i, OUTPUT);
     }
     //mcp.digitalWrite(0, HIGH);
-    
-
-
 
     //setup LCD
+    Wire.begin(sdaPin, sclPin);
     lcd.begin();
 
     // Turn on the blacklight and print a message.
     lcd.backlight();
-    lcd.print("Hello, world!");
-
+    lcd.setCursor(3, 0);
+    lcd.print("Cinematic");
+    lcd.setCursor(3, 1);
+    lcd.print("Laser Harp");
+    delay(2000);
+    lcd.clear();
+    lcd.print("Select : ");
+    lcd.cursor();
+    lcd.blink();
     //SetupArtnet
     artnet.begin();
 

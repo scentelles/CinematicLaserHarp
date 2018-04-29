@@ -22,7 +22,7 @@ void BeamFixture::setPosition(int value)
     Serial.print(" to position ");
     Serial.println(value);
     Fixture::position_ = value;
-    pwm_->setPWM(servonum_, 0, 200 + value);
+    pwm_->setPWM(servonum_, 0, 100 + value);
 }
 
 void BeamFixture::setInitPosition()

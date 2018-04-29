@@ -20,7 +20,9 @@ const int sclPin = D1;
 const int sdaPin = D2;
 int leftButtonPressCount = 0;
 bool leftButtonPressRequest = false;
+bool leftButtonLongPressRequest =  false;
 int nbLeftPress = 0;
+int nbLeftLongPress = 0;
 
 #define BUTTON_LEFT D5
 
@@ -77,9 +79,11 @@ void setup() {
     lcd.print("Laser Harp");
     delay(2000);
     lcd.clear();
-    lcd.print("Select : ");
+    lcd.print("Mode : IDLE");
     lcd.cursor();
     lcd.blink();
+
+    
     //SetupArtnet
     artnet.begin();
 
@@ -88,7 +92,7 @@ void setup() {
     mySequencer_p = new Sequencer((std::vector<Fixture*>*)&(myLaserHarpFixture.beamVector));
 
     mySequencer_p->setupLightSequence();
-    mySequencer_p->startLightSequence();
+
      
     myLaserKeyboard.setup();
    
@@ -100,6 +104,7 @@ void setup() {
 //Menu state machine
 
 //========================================================
+
 void displayLoop()
 {
   if(leftButtonPressRequest)
@@ -108,6 +113,21 @@ void displayLoop()
     lcd.print("Counter : ");
     lcd.print(nbLeftPress);
     leftButtonPressRequest = false;
+
+    lcd.clear();
+    lcd.print("Mode : IDLE");
+  }  
+  if(leftButtonLongPressRequest)
+  {
+   // lcd.clear();
+   // lcd.print("Long press : ");
+   // lcd.print(nbLeftLongPress);
+    leftButtonLongPressRequest = false;
+
+    lcd.clear();
+    lcd.print("Sequence started");
+    mySequencer_p->startLightSequence();
+    
   }  
 }
 
@@ -154,11 +174,16 @@ void buttonLoop()
   if(newLeftButtonState == 0)
   {
     leftButtonPressCount +=1;
-
+    //Serial.println(leftButtonPressCount);
     if(leftButtonPressCount == 2){
        Serial.println("Left Button pressed");
        nbLeftPress ++;
        leftButtonPressRequest = true;
+    }
+    if(leftButtonPressCount == 100){
+       Serial.println("Left Button long pressed");
+       nbLeftLongPress ++;
+       leftButtonLongPressRequest = true;
     }
   }
   else

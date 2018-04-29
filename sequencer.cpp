@@ -128,7 +128,6 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
 
 void Sequencer::moveFixtureToPosition(int fixtureId, int pos)
 {
-    //TODO implement servo move
     Serial.print("Moving Fixture ");
     Serial.print(fixtureId);
     Serial.print("to pos : ");

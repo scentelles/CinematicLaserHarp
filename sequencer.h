@@ -20,7 +20,7 @@ class Sequencer
 
   int currentLightSequenceStep_ = -1;
   int currentInnerStep_ = -2;
-  int lightSequenceNbSteps_ = 3;
+  int lightSequenceNbSteps_ = 5;
   short innerStepBeamToPositionMap[NB_BEAM][MAX_INNER_STEP];
   short sequenceBeamPosTarget[NB_BEAM][MAX_STEP];
   bool sequenceBeamLightTarget[NB_BEAM][MAX_STEP];

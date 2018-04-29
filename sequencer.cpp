@@ -29,7 +29,7 @@ void Sequencer::setupLightSequence()
 {
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][0] = 120;
+    sequenceBeamPosTarget[i][0] = 350;
     sequenceBeamLightTarget[i][0] = 1;
   }
   for(int i = 0; i < NB_BEAM; i++)
@@ -39,8 +39,18 @@ void Sequencer::setupLightSequence()
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][2] = 70;
+    sequenceBeamPosTarget[i][2] = 350;
     sequenceBeamLightTarget[i][2] = 1;
+  }
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][3] = 100;
+    sequenceBeamLightTarget[i][3] = 1;
+  }
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][4] = 350;
+    sequenceBeamLightTarget[i][4] = 1;
   }
 }
 
@@ -89,7 +99,7 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
   //todo : make progressive move profile. accel/decel 
 
   //TODO : to be computed based on duration
-  nbInnerStep_ = 10;
+  nbInnerStep_ = 50;
   for(int beamId = 0; beamId < NB_BEAM; beamId++)
   {
       int currentFixturePosition = (*fixtureVector_)[beamId]->position_;
@@ -97,7 +107,7 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
       Serial.println(currentFixturePosition);
 
       
-      int increment = (sequenceBeamPosTarget[beamId][currentLightSequenceStep_] - currentFixturePosition) / nbInnerStep_;
+      float increment = (float)((sequenceBeamPosTarget[beamId][currentLightSequenceStep_] - currentFixturePosition)) / nbInnerStep_;
       Serial.print("========== increment : ");
       Serial.println(increment);
             
@@ -105,10 +115,10 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
       {//todo : put final target value to avoid rounding delta.
           int newPos = currentFixturePosition + (increment * (j+1));
           innerStepBeamToPositionMap[beamId][j] = newPos;
-          Serial.print("========== Setting inner step position : ");
-          Serial.print(j);
-          Serial.print(" : ");
-          Serial.println(newPos);
+          //Serial.print("========== Setting inner step position : ");
+          //Serial.print(j);
+          //Serial.print(" : ");
+          //Serial.println(newPos);
       }
   }
   //reset inner step

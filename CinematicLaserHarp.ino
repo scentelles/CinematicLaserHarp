@@ -3,7 +3,6 @@
 #include <LiquidCrystal_I2C.h>
 
 
-
 #include "Adafruit_MCP23017.h"
 
 
@@ -19,6 +18,11 @@ char pass[] = "ab4ingrograstanstorc";       // your network password
 
 const int sclPin = D1;
 const int sdaPin = D2;
+int leftButtonPressCount = 0;
+bool leftButtonPressRequest = false;
+int nbLeftPress = 0;
+
+#define BUTTON_LEFT D5
 
 LaserKeyboard myLaserKeyboard;
 LaserHarpFixture myLaserHarpFixture;
@@ -96,6 +100,16 @@ void setup() {
 //Menu state machine
 
 //========================================================
+void displayLoop()
+{
+  if(leftButtonPressRequest)
+  {
+    lcd.clear();
+    lcd.print("Counter : ");
+    lcd.print(nbLeftPress);
+    leftButtonPressRequest = false;
+  }  
+}
 
 
 //========================================================
@@ -104,14 +118,6 @@ void setup() {
 
 
 
-
-void buttonsLoop()
-{
-  //up
-  //down
-  //enter
-  //back (long enter?)
-}
 
 void artNetLoop()
 {
@@ -140,16 +146,39 @@ void ultrasonicLoop()
   
 }
 
+
+void buttonLoop()
+{
+  int newLeftButtonState = digitalRead(BUTTON_LEFT);
+  
+  if(newLeftButtonState == 0)
+  {
+    leftButtonPressCount +=1;
+
+    if(leftButtonPressCount == 2){
+       Serial.println("Left Button pressed");
+       nbLeftPress ++;
+       leftButtonPressRequest = true;
+    }
+  }
+  else
+  {
+    leftButtonPressCount = 0;
+  }
+}
+
+
 void loop() {
 
   myLaserKeyboard.loop();
   mySequencer_p->lightSequenceLoop();
-  //displayLoop();
+  displayLoop();
+  buttonLoop();
   //ultrasonicLoop();
   //ArtNet input loop
   //artNetLoop();
 
 
-  delay(500);
+  delay(10);
   
 }

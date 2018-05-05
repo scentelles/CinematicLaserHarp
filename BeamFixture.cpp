@@ -2,11 +2,13 @@
 
 #include "BeamFixture.h"
 
-BeamFixture::BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoId)
+BeamFixture::BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoId, int powerNum)
 {
     //setup servos
     pwm_ = pwm_p;
-    servonum_ = servoId;
+    servoNum_ = servoId;
+    powerNum_ = powerNum;
+
     //todo : move this this to base class
     name_ = name;
 
@@ -18,11 +20,11 @@ void BeamFixture::setPosition(int value)
     //TODO : implement servo control
     //todo : value to pulselen
     Serial.print("Moving servo ");
-    Serial.print(servonum_);
+    Serial.print(servoNum_);
     Serial.print(" to position ");
     Serial.println(value);
     Fixture::position_ = value;
-    pwm_->setPWM(servonum_, 0, 100 + value);
+    pwm_->setPWM(servoNum_, 0, 125 + value*1.5);
 }
 
 void BeamFixture::setInitPosition()
@@ -37,8 +39,8 @@ void BeamFixture::setPositionOffset(int offset)
 {
   
 }
-void BeamFixture::setOn(bool val)
+void BeamFixture::setPower(int val)
 {
-   Serial.println("Setting BeaM ON");
-   //todo : control the IO
+   Serial.println("BeamFixture::Setting beam power");
+    pwm_->setPWM(powerNum_, 0, 4096/127 * val);
 }

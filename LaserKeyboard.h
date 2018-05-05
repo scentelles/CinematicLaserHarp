@@ -1,5 +1,5 @@
 #include "OSCManager.h"
-
+#include "Adafruit_MCP23017.h"
 #define NB_BEAM 7
 
 class LaserKeyboard{
@@ -10,10 +10,10 @@ class LaserKeyboard{
   
   int currentBeamStatus_ = 0;
   OSCManager * myOSCManager_;
-  
+  Adafruit_MCP23017 * mcp_;
 
   public:
-  LaserKeyboard();
+  LaserKeyboard(Adafruit_MCP23017 * mcp);
   void setup();
   void loop();
   void setBeamIdToNote(int beamId, int note);

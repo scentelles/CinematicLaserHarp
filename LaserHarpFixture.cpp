@@ -4,14 +4,15 @@ LaserHarpFixture::LaserHarpFixture()
 {
     pwm_.begin();
     pwm_.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
-    
-    beamVector.push_back(new BeamFixture("BEAM_0", &pwm_, 0));
-    beamVector.push_back(new BeamFixture("BEAM_1", &pwm_, 1));
-    beamVector.push_back(new BeamFixture("BEAM_2", &pwm_, 2));
-    beamVector.push_back(new BeamFixture("BEAM_3", &pwm_, 3));
-    beamVector.push_back(new BeamFixture("BEAM_4", &pwm_, 4));
-    beamVector.push_back(new BeamFixture("BEAM_5", &pwm_, 5));
-    beamVector.push_back(new BeamFixture("BEAM_6", &pwm_, 6));
+
+ 
+    beamVector.push_back(new BeamFixture("BEAM_0", &pwm_, 0, 8));
+    beamVector.push_back(new BeamFixture("BEAM_1", &pwm_, 1, 9));
+    beamVector.push_back(new BeamFixture("BEAM_2", &pwm_, 2, 10));
+    beamVector.push_back(new BeamFixture("BEAM_3", &pwm_, 3, 11));
+    beamVector.push_back(new BeamFixture("BEAM_4", &pwm_, 4, 12));
+    beamVector.push_back(new BeamFixture("BEAM_5", &pwm_, 5, 13));
+    beamVector.push_back(new BeamFixture("BEAM_6", &pwm_, 6, 14));
 }
 
 
@@ -37,9 +38,12 @@ void LaserHarpFixture::setup()
 
 }
 
+
 void LaserHarpFixture::setBeamPosition(int beamId, int position)
 {
     beamVector[beamId]->setPosition(position);
+
+
 }
   
 

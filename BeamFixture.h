@@ -14,15 +14,16 @@ class BeamFixture: public Fixture{
   bool isOn = false;
   int positionOffset;
   Adafruit_PWMServoDriver * pwm_;
-  int servonum_;
+  int servoNum_;
+  int powerNum_;
   
   public:
-  BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoId);
+  BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoId, int powerNum);
 
   void setPositionOffset(int offset);
   void setPosition(int position);
   void setInitPosition();
-  void setOn(bool val);
+  void setPower(int val);
 };
 
 #endif

@@ -17,12 +17,8 @@
       Serial.println("BEAM INIT POSITION CALLEDFROM BASE FIXTURE=======================================================");
       position_ = 0;
   }
-  void Fixture::setOn(bool val)
+  void Fixture::setPower(int val)
   {
-    Serial.print("Turning ON or OFF FIXTURE ");
-    Serial.print(name_);
-    Serial.print(" : ");
-    Serial.println(val);
     statusOn_ = val;  
   }
   

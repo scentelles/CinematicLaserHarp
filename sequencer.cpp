@@ -24,37 +24,68 @@ void Sequencer::addStepDefinition()
 {
   
 }
+/*
+void Sequencer::setupLightSequence()
+{
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][0] = 127;
+    sequenceBeamLightTarget[i][0] = 0;
+  }
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][1] = 0;
+    sequenceBeamLightTarget[i][1] = 127;
+  }
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][2] = 127;
+    sequenceBeamLightTarget[i][2] = 0;
+  }
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][3] = 0;
+    sequenceBeamLightTarget[i][3] = 8;
+  }
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+    sequenceBeamPosTarget[i][4] = 64;
+    sequenceBeamLightTarget[i][4] = 16;
+  }
+}
+*/
 
 void Sequencer::setupLightSequence()
 {
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][0] = 350;
-    sequenceBeamLightTarget[i][0] = 1;
+    sequenceBeamPosTarget[i][0] = 64;
+    sequenceBeamLightTarget[i][0] = 0;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][1] = 0;
-    sequenceBeamLightTarget[i][1] = 0;
+    sequenceBeamPosTarget[i][1] = 64;
+    sequenceBeamLightTarget[i][1] = 16;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][2] = 350;
-    sequenceBeamLightTarget[i][2] = 1;
+    sequenceBeamPosTarget[i][2] = 64;
+    sequenceBeamLightTarget[i][2] = 32;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][3] = 100;
-    sequenceBeamLightTarget[i][3] = 1;
+    sequenceBeamPosTarget[i][3] = 64;
+    sequenceBeamLightTarget[i][3] = 48;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][4] = 350;
-    sequenceBeamLightTarget[i][4] = 1;
+    sequenceBeamPosTarget[i][4] = 64;
+    sequenceBeamLightTarget[i][4] = 127;
   }
 }
 
-void Sequencer::startLightSequence()
+
+void Sequencer::startLightSequence(bool loop)
 {
   Serial.println("Starting Light sequence");
   if(state_ == S_STARTED)
@@ -87,7 +118,7 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
   //set on/off state of the fixture at beginning of the step
   for(int i = 0; i < NB_BEAM; i++)
   {
-    setFixtureOn(i, sequenceBeamLightTarget[i][stepId]) ;
+    setFixturePower(i, sequenceBeamLightTarget[i][stepId]) ;
   }
 
   
@@ -99,7 +130,7 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
   //todo : make progressive move profile. accel/decel 
 
   //TODO : to be computed based on duration
-  nbInnerStep_ = 50;
+  nbInnerStep_ = 40;
   for(int beamId = 0; beamId < NB_BEAM; beamId++)
   {
       int currentFixturePosition = (*fixtureVector_)[beamId]->position_;
@@ -128,29 +159,21 @@ void Sequencer::setLightSequenceNewStepTargets(int stepId)
 
 void Sequencer::moveFixtureToPosition(int fixtureId, int pos)
 {
-    Serial.print("Moving Fixture ");
+   /* Serial.print("Moving Fixture ");
     Serial.print(fixtureId);
     Serial.print("to pos : ");
-    Serial.println(pos);
+    Serial.println(pos);*/
     (*fixtureVector_)[fixtureId]->setPosition(pos);
 
 }
-void Sequencer::setFixtureOn(int fixtureId, bool command)
-{
-    //TODO implement fixture On/Off
-    if(command)
-    {
-      Serial.print("Turning ON Fixture ");
-      Serial.println(fixtureId);
-    }
-    else
-    {
-      Serial.print("Turning OFF Fixture ");
-      Serial.println(fixtureId);      
-    }
 
-    
-    (*fixtureVector_)[fixtureId]->setOn(command);
+void Sequencer::setFixturePower(int fixtureId, int command)
+{
+    Serial.print("Sequencer::setting Fixture Power ");
+    Serial.print(fixtureId);
+    Serial.print(" Power : ");
+    Serial.println(command);
+    (*fixtureVector_)[fixtureId]->setPower(command);
 
 }
 void Sequencer::lightSequenceLoop()

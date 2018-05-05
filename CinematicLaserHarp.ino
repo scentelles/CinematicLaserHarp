@@ -1,10 +1,7 @@
 #include <ESP8266WiFi.h>
 
 #include <LiquidCrystal_I2C.h>
-
-
 #include "Adafruit_MCP23017.h"
-
 
 #include "sequencer.h"
 #include "LaserKeyboard.h"
@@ -26,7 +23,8 @@ int nbLeftLongPress = 0;
 
 #define BUTTON_LEFT D5
 
-LaserKeyboard myLaserKeyboard;
+
+LaserKeyboard * myLaserKeyboard_p;
 LaserHarpFixture myLaserHarpFixture;
 Sequencer  * mySequencer_p;
 Adafruit_MCP23017 mcp;
@@ -56,21 +54,24 @@ void setup() {
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
-
+    //Start I2C
+    Wire.begin(sdaPin, sclPin);
+    
     //setup IO expander
+    //MCP base address is hard coded(0x20)
     mcp.begin();      // use default address 0
     for(int i = 0; i < NB_BEAM; i++){
         mcp.pinMode(i, OUTPUT);
     }
     for(int i = 8; i < 8 + NB_BEAM; i++){
-        mcp.pinMode(i, OUTPUT);
+        mcp.pinMode(i, INPUT);
+        mcp.pullUp(i, HIGH); 
     }
-    //mcp.digitalWrite(0, HIGH);
+
 
     //setup LCD
-    Wire.begin(sdaPin, sclPin);
-    lcd.begin();
 
+    lcd.begin();
     // Turn on the blacklight and print a message.
     lcd.backlight();
     lcd.setCursor(3, 0);
@@ -93,8 +94,11 @@ void setup() {
 
     mySequencer_p->setupLightSequence();
 
-     
-    myLaserKeyboard.setup();
+    //beam keyboard setup
+    myLaserKeyboard_p = new LaserKeyboard(&mcp);     
+    myLaserKeyboard_p->setup();
+
+
    
 }
 
@@ -126,7 +130,9 @@ void displayLoop()
 
     lcd.clear();
     lcd.print("Sequence started");
-    mySequencer_p->startLightSequence();
+    
+    mySequencer_p->startLightSequence(true);
+
     
   }  
 }
@@ -179,6 +185,8 @@ void buttonLoop()
        Serial.println("Left Button pressed");
        nbLeftPress ++;
        leftButtonPressRequest = true;
+
+       
     }
     if(leftButtonPressCount == 100){
        Serial.println("Left Button long pressed");
@@ -195,7 +203,7 @@ void buttonLoop()
 
 void loop() {
 
-  myLaserKeyboard.loop();
+  myLaserKeyboard_p->loop();
   mySequencer_p->lightSequenceLoop();
   displayLoop();
   buttonLoop();
@@ -204,6 +212,9 @@ void loop() {
   //artNetLoop();
 
 
+
+
   delay(10);
+
   
 }

@@ -1,32 +1,33 @@
 #include "LaserKeyboard.h"
 
-LaserKeyboard::LaserKeyboard()
+LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp)
 {
   //todo : get from EEPROM
   //init beam to note map.
   beamIdToNoteMap[0] = 42;
   beamIdToNoteMap[1] = 43;
   beamIdToNoteMap[2] = 44;
-  beamIdToNoteMap[3] = 45;
-  beamIdToNoteMap[4] = 46;
-  beamIdToNoteMap[5] = 47;
-  beamIdToNoteMap[6] = 48;
+  beamIdToNoteMap[3] = 54;
+  beamIdToNoteMap[4] = 64;
+  beamIdToNoteMap[5] = 74;
+  beamIdToNoteMap[6] = 84;
 
-  beamToPinMap[0] = D5;
-  beamToPinMap[1] = D6;
-  beamToPinMap[2] = D7;
-  beamToPinMap[3] = D7;
-  beamToPinMap[4] = D7;
-  beamToPinMap[5] = D7;
-  beamToPinMap[6] = D7;  
+  beamToPinMap[0] = 8;
+  beamToPinMap[1] = 9;
+  beamToPinMap[2] = 10;
+  beamToPinMap[3] = 11;
+  beamToPinMap[4] = 12;
+  beamToPinMap[5] = 13;
+  beamToPinMap[6] = 14;  
 
   myOSCManager_ = new OSCManager();
+  mcp_ = mcp;
 }
 //todo : destructor
 
 void LaserKeyboard::setup()
 {
-
+  myOSCManager_->setup();
 }
 
 void LaserKeyboard::setBeamIdToNote(int beamId, int note)
@@ -40,19 +41,41 @@ void LaserKeyboard::setBeamIdToNote(int beamId, int note)
 void LaserKeyboard::process_beam_event(int beamId, bool value)
 {
       //  sendCC(51, newFilter);
-        myOSCManager_->sendNote(beamIdToNoteMap[beamId], 120, 100);
-  
+        Serial.print("LaserKeyboard::process_beam_event : ");
+        Serial.print(beamId);
+        Serial.print(" : ");
+        Serial.println(value);
+        if(value)
+        {
+            myOSCManager_->sendNote(beamIdToNoteMap[beamId], 120, 0);
+        }
+        else
+        {
+            myOSCManager_->sendNote(beamIdToNoteMap[beamId], 0, 0);
+        }
 }
 
 
 void LaserKeyboard::loop()
 {
-
+  short tmpRegister;
+  if(mcp_ != NULL)//read full register from IO expander once
+  {
+      tmpRegister  = mcp_->readGPIO(1); //read PORT B
+    //  Serial.println(tmpRegister, BIN);
+  }
   for(int i = 0; i < NB_BEAM; i++)
   {
-      //todo : replace with I2C IO read
-      currentBeamStatus_ = digitalRead(beamToPinMap[i]);
-      
+      if(mcp_ != NULL) //read from IO expander register value
+      {
+          currentBeamStatus_ = (tmpRegister >> i) & 1;   
+        //  Serial.println(currentBeamStatus_);
+      }
+      else //read directly from pins
+      {
+          currentBeamStatus_ = digitalRead(beamToPinMap[i]);
+      }
+
       //update and take action only if the status has changed
       if(currentBeamStatus_ != beamStatusMap[i])
       {

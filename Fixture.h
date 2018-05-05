@@ -12,7 +12,7 @@ class Fixture
   Fixture(String name);
   virtual void setPosition(int position);
   virtual void setInitPosition();
-  virtual void setOn(bool val); //overload in derived class to implement access to on/off (DMW or HW)
+  virtual void setPower(int val); //overload in derived class to implement access to dimming/power
   
 };
 

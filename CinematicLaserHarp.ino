@@ -9,6 +9,7 @@
 
 #include <Artnet.h>
 Artnet artnet;
+#define CLH_ADDRESS 16
 
 char ssid[] = "SFR_34A8";                   // your network SSID (name)
 char pass[] = "ab4ingrograstanstorc";       // your network password
@@ -44,10 +45,11 @@ void setup() {
     Serial.println(ssid);
     WiFi.begin(ssid, pass);
 
-   // while (WiFi.status() != WL_CONNECTED) {
-   //     delay(500);
-   //     Serial.print(".");
-   // }
+//TODO : add Wifi timeout
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
     Serial.println("");
 
     Serial.println("WiFi connected");
@@ -123,9 +125,6 @@ void displayLoop()
   }  
   if(leftButtonLongPressRequest)
   {
-   // lcd.clear();
-   // lcd.print("Long press : ");
-   // lcd.print(nbLeftLongPress);
     leftButtonLongPressRequest = false;
 
     lcd.clear();
@@ -149,22 +148,15 @@ void artNetLoop()
 {
    if (artnet.read() == ART_DMX)
   {
-    // print out our data
-    Serial.print("universe number = ");
-    Serial.print(artnet.getUniverse());
-    Serial.print("\tdata length = ");
-    Serial.print(artnet.getLength());
-    Serial.print("\tsequence n0. = ");
-    Serial.println(artnet.getSequence());
-    Serial.print("DMX data: ");
-    for (int i = 0 ; i < artnet.getLength() ; i++)
-    {
-      Serial.print(artnet.getDmxFrame()[i]);
-      Serial.print("  ");
-    }
+    //TODO : get Address from config
+    int newLaserValue= artnet.getDmxFrame()[CLH_ADDRESS - 1 + 0];
+    myLaserHarpFixture.beamVector[0]->setPower(newLaserValue);
+    int newLaserPosition= artnet.getDmxFrame()[CLH_ADDRESS - 1 + 1];
+    myLaserHarpFixture.beamVector[0]->setPosition(newLaserPosition);
     Serial.println();
     Serial.println();
   }
+
 }
 
 void ultrasonicLoop()
@@ -209,7 +201,7 @@ void loop() {
   buttonLoop();
   //ultrasonicLoop();
   //ArtNet input loop
-  //artNetLoop();
+  artNetLoop();
 
 
 

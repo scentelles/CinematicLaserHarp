@@ -42,5 +42,5 @@ void BeamFixture::setPositionOffset(int offset)
 void BeamFixture::setPower(int val)
 {
    Serial.println("BeamFixture::Setting beam power");
-    pwm_->setPWM(powerNum_, 0, 4096/127 * val);
+    pwm_->setPWM(powerNum_, 0, 4096/256 * val);
 }

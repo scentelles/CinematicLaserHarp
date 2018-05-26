@@ -45,5 +45,18 @@ void LaserHarpFixture::setBeamPosition(int beamId, int position)
 
 
 }
+
+void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
+{
+   int newLaserValue, newLaserPosition;
+   
+   for(int i = 0; i < NB_BEAM; i++)
+   {
+      newLaserValue = dmxFrame[DMX_ADDRESS - 1 + i];
+      beamVector[i]->setPower(newLaserValue);
+      newLaserPosition= dmxFrame[DMX_ADDRESS + i];
+      beamVector[i]->setPosition(newLaserPosition);
+   }
+}
   
 

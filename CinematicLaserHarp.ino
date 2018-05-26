@@ -9,10 +9,12 @@
 
 #include <Artnet.h>
 Artnet artnet;
-#define CLH_ADDRESS 16
 
-char ssid[] = "SFR_34A8";                   // your network SSID (name)
-char pass[] = "ab4ingrograstanstorc";       // your network password
+
+//char ssid[] = "SFR_34A8";                   // your network SSID (name)
+//char pass[] = "ab4ingrograstanstorc";       // your network password
+char ssid[] = "slyzic-hotspot";                   // your network SSID (name)
+char pass[] = "totototo";       // your network password
 
 const int sclPin = D1;
 const int sdaPin = D2;
@@ -148,13 +150,11 @@ void artNetLoop()
 {
    if (artnet.read() == ART_DMX)
   {
+    
     //TODO : get Address from config
-    int newLaserValue= artnet.getDmxFrame()[CLH_ADDRESS - 1 + 0];
-    myLaserHarpFixture.beamVector[0]->setPower(newLaserValue);
-    int newLaserPosition= artnet.getDmxFrame()[CLH_ADDRESS - 1 + 1];
-    myLaserHarpFixture.beamVector[0]->setPosition(newLaserPosition);
-    Serial.println();
-    Serial.println();
+    uint8_t* dmxFrames = artnet.getDmxFrame();
+    myLaserHarpFixture.applyDmxCommands(dmxFrames);
+    
   }
 
 }

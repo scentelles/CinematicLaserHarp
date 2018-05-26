@@ -17,7 +17,7 @@ BeamFixture::BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoI
 
 void BeamFixture::setPosition(int value)
 {
-    //TODO : implement servo control
+
     //todo : value to pulselen
     Serial.print("Moving servo ");
     Serial.print(servoNum_);
@@ -41,6 +41,6 @@ void BeamFixture::setPositionOffset(int offset)
 }
 void BeamFixture::setPower(int val)
 {
-   Serial.println("BeamFixture::Setting beam power");
+ //  Serial.println("BeamFixture::Setting beam power");
     pwm_->setPWM(powerNum_, 0, 4096/256 * val);
 }

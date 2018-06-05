@@ -72,8 +72,7 @@ void setup() {
         mcp.pullUp(i, HIGH); 
     }
 
-
-    //setup LCD
+   //setup LCD
 
     lcd.begin();
     // Turn on the blacklight and print a message.

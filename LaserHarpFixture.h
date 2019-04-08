@@ -18,7 +18,9 @@ class LaserHarpFixture
   public:
   LaserHarpFixture();
   void setup();
+  void resetPosition();
   void setBeamPosition(int beamId, int position);
   void applyDmxCommands(uint8_t* dmxFrame);
+  int getDmxAddress();
 
 };

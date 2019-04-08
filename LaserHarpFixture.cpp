@@ -16,6 +16,13 @@ LaserHarpFixture::LaserHarpFixture()
 }
 
 
+void LaserHarpFixture::resetPosition()
+{
+  for(int i = 0; i < NB_BEAM; i++)
+  {
+      beamVector[i]->setInitPosition();
+  }  
+}
 
 void LaserHarpFixture::setup()
 {
@@ -29,13 +36,8 @@ void LaserHarpFixture::setup()
    beamVector[4]->setPositionOffset(0);
    beamVector[5]->setPositionOffset(0);
    beamVector[6]->setPositionOffset(0);
-   
-  for(int i = 0; i < NB_BEAM; i++)
-  {
-      beamVector[i]->setInitPosition();
-  }
 
-
+   resetPosition();
 }
 
 
@@ -52,11 +54,16 @@ void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
    
    for(int i = 0; i < NB_BEAM; i++)
    {
-      newLaserValue = dmxFrame[DMX_ADDRESS - 1 + i];
+      newLaserValue = dmxFrame[DMX_ADDRESS - 1 + i*2];
       beamVector[i]->setPower(newLaserValue);
-      newLaserPosition= dmxFrame[DMX_ADDRESS + i];
+      newLaserPosition= dmxFrame[DMX_ADDRESS + i*2];
       beamVector[i]->setPosition(newLaserPosition);
    }
+}
+
+int LaserHarpFixture::getDmxAddress()
+{
+    return DMX_ADDRESS;  
 }
   
 

@@ -8,7 +8,7 @@
 
 #define SERVOMIN  150 // this is the 'minimum' pulse length count (out of 4096)
 #define SERVOMAX  600 // this is the 'maximum' pulse length count (out of 4096)
-
+ 
 class BeamFixture: public Fixture{
   public:
   bool isOn = false;
@@ -21,6 +21,7 @@ class BeamFixture: public Fixture{
   BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoId, int powerNum);
 
   void setPositionOffset(int offset);
+  int getPositionOffset();
   void setPosition(int position);
   void setInitPosition();
   void setPower(int val);

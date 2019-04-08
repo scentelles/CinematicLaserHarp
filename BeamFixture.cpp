@@ -14,15 +14,18 @@ BeamFixture::BeamFixture(String name, Adafruit_PWMServoDriver* pwm_p, int servoI
 
 }
 
+int BeamFixture::getPositionOffset()
+{
+  return positionOffset; 
+}
 
 void BeamFixture::setPosition(int value)
 {
-
     //todo : value to pulselen
-    Serial.print("Moving servo ");
-    Serial.print(servoNum_);
-    Serial.print(" to position ");
-    Serial.println(value);
+    //Serial.print("Moving servo ");
+   // Serial.print(servoNum_);
+    //Serial.print(" to position ");
+    //Serial.println(value);
     Fixture::position_ = value;
     pwm_->setPWM(servoNum_, 0, 125 + value*1.5);
 }
@@ -37,10 +40,15 @@ void BeamFixture::setInitPosition()
 }
 void BeamFixture::setPositionOffset(int offset)
 {
+  positionOffset = offset;
+  setPosition(offset);
   
 }
 void BeamFixture::setPower(int val)
 {
- //  Serial.println("BeamFixture::Setting beam power");
+    //Serial.print("Setting beam power ");
+    //Serial.print(servoNum_);
+    //Serial.print(" to value ");
+    //Serial.println(val);
     pwm_->setPWM(powerNum_, 0, 4096/256 * val);
 }

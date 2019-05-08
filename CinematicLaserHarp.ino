@@ -92,7 +92,7 @@ byte getPressedButton() {
 
   /* Lit l'état des boutons */
   int value = analogRead(A0);
- Serial.println(value);
+ //Serial.println(value);
   /* Calcul l'état des boutons */
   if (value < 50)
     return BUTTON_RIGHT;
@@ -177,11 +177,13 @@ void setup() {
       
     }
     
-    stateMachineStateAction(HMI_IDLE);
+
     
 
     //initialize fixture positions and state
     myLaserHarpFixture.setup();
+
+
 
     mySequencer_p = new Sequencer((std::vector<Fixture*>*)&(myLaserHarpFixture.beamVector));
     mySequencer_p->setupLightSequence();
@@ -189,7 +191,7 @@ void setup() {
     //beam keyboard setup
     myLaserKeyboard_p = new LaserKeyboard(&mcp, &lcd);     
 
-
+    stateMachineStateAction(HMI_IDLE);
 
    
 }
@@ -220,7 +222,7 @@ String buttonToString(int buttonVal)
 void stateMachineStateAction(int state)
 {
    HMI_State = state;
-   int newPosition;
+   int newOffset;
    int tempIndex;
    switch(state)
    {
@@ -259,7 +261,8 @@ void stateMachineStateAction(int state)
            lcd.setCursor(0, 1);
            //currentLHNotes = currentLHNotes[currentLHNotes];
            lcd.print(myLaserKeyboard_p->getCurrentPreset());              
-           myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset());           
+           myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset());  
+                    
            break;
         case HMI_LASERHARP_ONGOING: 
               
@@ -267,7 +270,8 @@ void stateMachineStateAction(int state)
           lcd.setCursor(0, 0);
           lcd.print("LASERHARP:PS ");  
           lcd.print(myLaserKeyboard_p->getCurrentPreset());
-          
+          myLaserHarpFixture.setLaserHarpInitPosition();
+          myLaserHarpFixture.powerAllBeams(true);
           lcd.blink();
 
           break;
@@ -332,14 +336,28 @@ void stateMachineStateAction(int state)
           lcd.print("BEAM ");
           lcd.print(currentLHBeamEditing);
           lcd.print(" : ");
-          newPosition = myLaserHarpFixture.beamVector[currentLHBeamEditing]->getPositionOffset() + editValue;
-          myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPositionOffset(newPosition);
-          lcd.print(newPosition); 
+          newOffset = myLaserHarpFixture.beamVector[currentLHBeamEditing]->getPositionOffset() + editValue;
+          myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPositionOffset(newOffset);
+          myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPosition(CENTER_POSITION);
+          lcd.print(newOffset); 
           editValue = 0;    
           lcd.blink();
 
           break;
-           
+
+         case HMI_SETTINGS_CALIBRATION_SAVING: 
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("SAVED : CALIBRATION ");  
+
+
+          myLaserHarpFixture.storeCalibration();
+          lcd.blink();
+          delay(3000);
+          stateMachineStateAction(HMI_SETTINGS_CALIBRATION_IDLE);
+
+         break;
+         
         default :
           Serial.print("ERROR: state action unknown : ");
           Serial.println(state);
@@ -441,7 +459,11 @@ int stateMachineTransition(int buttonVal, int pressType)
        case HMI_LASERHARP_ONGOING:
            //any button press stops the Laserharp and goes back to Laserharp idle
            //todo : stop OSC
-           stateMachineStateAction(HMI_LASERHARP_IDLE);  
+           if(buttonVal == BUTTON_RIGHT)
+           {
+           myLaserHarpFixture.powerAllBeams(false);
+           stateMachineStateAction(HMI_LASERHARP_IDLE);
+           }  
        break;
  
        
@@ -575,12 +597,18 @@ int stateMachineTransition(int buttonVal, int pressType)
                   stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);                
                break; 
                case BUTTON_LEFT:
-                  currentLHBeamEditing -= 1;
-                  stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);                
+                  if (currentLHBeamEditing > 0)
+                  {
+                      currentLHBeamEditing -= 1;
+                      stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);                
+                  }
                break; 
                case BUTTON_RIGHT:
-                  currentLHBeamEditing += 1;
-                  stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);                
+                  if (currentLHBeamEditing < NB_BEAM -1)
+                  {
+                      currentLHBeamEditing += 1;
+                      stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);       
+                  }         
                break; 
                case BUTTON_SELECT:
                    if(pressType == LONG_PRESS)

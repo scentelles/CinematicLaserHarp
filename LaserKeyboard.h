@@ -26,6 +26,7 @@ class LaserKeyboard{
   int beamStatusMap[NB_BEAM];
   
   int currentBeamStatus_ = 0;
+  int countSinceLastTriggerMap[NB_BEAM]; //init max as we don't want to trigger at init
   OSCManager * myOSCManager_;
   Adafruit_MCP23017 * mcp_;
 

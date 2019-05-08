@@ -21,12 +21,24 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
   beamToPinMap[5] = 13;
   beamToPinMap[6] = 14;  
 
- // IPAddress* remoteIPAddress = new IPAddress(192,168,1,51);
-  IPAddress* remoteIPAddress = new IPAddress(192,168,1,64);
+  countSinceLastTriggerMap[0] = 0xFFFF;//init to max as we don't want to trigger at init
+  countSinceLastTriggerMap[1] = 0xFFFF;
+  countSinceLastTriggerMap[2] = 0xFFFF;
+  countSinceLastTriggerMap[3] = 0xFFFF;
+  countSinceLastTriggerMap[4] = 0xFFFF;
+  countSinceLastTriggerMap[5] = 0xFFFF;
+  countSinceLastTriggerMap[6] = 0xFFFF;
+  
+  //IPAddress* remoteIPAddress = new IPAddress(192,168,1,51);
+  IPAddress* remoteIPAddress = new IPAddress(192,168,1,21); //beelink
+  // IPAddress* remoteIPAddress = new IPAddress(192,168,1,64);
   myOSCManager_ = new OSCManager(remoteIPAddress, 8000, 8888);
   mcp_ = mcp;
 }
+
 //todo : destructor
+
+
 void LaserKeyboard::readAllPresetsFromROM()
 {
 
@@ -51,7 +63,7 @@ void LaserKeyboard::readAllPresetsFromROM()
       notePresets_.push_back(tempPreset);
       Serial.println("Added new preset from ROM");
     }
-  
+  EEPROM.end();
   }
   
 void LaserKeyboard::storePreset(int index, std::array<int, NB_BEAM> * thisPreset)
@@ -69,7 +81,8 @@ void LaserKeyboard::storePreset(int index, std::array<int, NB_BEAM> * thisPreset
     Serial.print("Storing Preset at index ");
     Serial.println(index);
     EEPROM.write(NB_PRESET_ADDRESS, notePresets_.size());
-    EEPROM.commit();  
+   // EEPROM.commit();  
+    EEPROM.end();
 }
 
 
@@ -140,6 +153,7 @@ void LaserKeyboard::process_beam_event(int beamId, bool value)
         Serial.print("Current Preset : ");
         Serial.println(currentPreset_);
         int currentNote = notePresets_[currentPreset_][beamId];
+        
         if(value)
         {
             myOSCManager_->sendNote(currentNote, 120, 0);
@@ -167,20 +181,33 @@ void LaserKeyboard::loop()
   if(mcp_ != NULL)//read full register from IO expander once
   {
       tmpRegister  = mcp_->readGPIO(1); //read PORT B
-    //  Serial.println(tmpRegister, BIN);
+   //   Serial.println(tmpRegister, BIN);
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
       if(mcp_ != NULL) //read from IO expander register value
       {
           currentBeamStatus_ = (tmpRegister >> i) & 1;   
-        //  Serial.println(currentBeamStatus_);
+          //Serial.println(currentBeamStatus_);
+          
       }
       else //read directly from pins
       {
           currentBeamStatus_ = digitalRead(beamToPinMap[i]);
       }
 
+      if(currentBeamStatus_)
+      {
+         countSinceLastTriggerMap[i] = 0;  
+      }
+      countSinceLastTriggerMap[i]++;
+
+      //keep the trigger on debounce fog hazard
+      if(countSinceLastTriggerMap[i] < 20)
+      {
+        currentBeamStatus_ = 1;
+      }
+      
       //update and take action only if the status has changed
       if(currentBeamStatus_ != beamStatusMap[i])
       {

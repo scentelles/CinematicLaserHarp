@@ -6,9 +6,9 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
 {
 
   lcd_ = lcdDisplay;
-  
-  //todo : get from EEPROM
-  notePresets_.push_back({45, 56, 60, 62, 63, 45, 21});
+  buildMidiToNoteMap();
+
+
   readAllPresetsFromROM();
   
   loadPreset(currentPreset_);
@@ -28,7 +28,8 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
   countSinceLastTriggerMap[4] = 0xFFFF;
   countSinceLastTriggerMap[5] = 0xFFFF;
   countSinceLastTriggerMap[6] = 0xFFFF;
-  
+
+  //TODO : put this into WifiManager config
   //IPAddress* remoteIPAddress = new IPAddress(192,168,1,51);
   IPAddress* remoteIPAddress = new IPAddress(192,168,1,21); //beelink
   // IPAddress* remoteIPAddress = new IPAddress(192,168,1,64);
@@ -44,24 +45,37 @@ void LaserKeyboard::readAllPresetsFromROM()
 
   EEPROM.begin(512);
     int nbPresetFromROM =  (char)EEPROM.read(NB_PRESET_ADDRESS);
-    //TODO : find another way...
-    if(nbPresetFromROM < 1 || nbPresetFromROM > 32)
-        nbPresetFromROM = 1;
+
     Serial.print("Found nb presets in ROM :");
     Serial.println(nbPresetFromROM);
-    //skip first one as wee need at least one preset untouched
-    for(int i = 1; i < nbPresetFromROM;i++)
+    if(nbPresetFromROM < 1 || nbPresetFromROM > NB_PRESETS)
     {
-      int addr  =  i * BANK_SIZE;      
-      std::array<int, NB_BEAM> tempPreset;
-      for(int j=0; j < NB_BEAM-1; j++)
-      { 
-        char tempC = (char)EEPROM.read(addr + i);
-        
-        tempPreset[j] = tempC;
+        nbPresetFromROM = 1;
+        notePresets_.push_back(defaultNotes);
+    }
+    else
+    {
+
+      for(int i = 0; i < nbPresetFromROM; i++)
+      {
+   
+        int addr  =  i * BANK_SIZE;     
+        Serial.print("Reading Preset Bank ");
+        Serial.print(i); 
+        Serial.print("at address : ");
+        Serial.println(addr);
+                       
+        std::array<int, NB_BEAM> tempPreset;
+        for(int j=0; j < NB_BEAM; j++)
+        { 
+          char tempC = (char)EEPROM.read(addr + j);
+          tempPreset[j] = tempC;
+          Serial.print("Read from ROM : ");
+          Serial.println((int)tempC);
+        }
+        notePresets_.push_back(tempPreset);
+        Serial.println("Added new preset from ROM");
       }
-      notePresets_.push_back(tempPreset);
-      Serial.println("Added new preset from ROM");
     }
   EEPROM.end();
   }
@@ -70,7 +84,7 @@ void LaserKeyboard::storePreset(int index, std::array<int, NB_BEAM> * thisPreset
 {
   int addr  = index * BANK_SIZE;
   EEPROM.begin(512);
-    for(int i=0; i < NB_BEAM-1; i++)
+    for(int i=0; i < NB_BEAM; i++)
     { 
       EEPROM.write(addr + i, (*thisPreset)[i]);
       Serial.print("Writing ");
@@ -81,7 +95,6 @@ void LaserKeyboard::storePreset(int index, std::array<int, NB_BEAM> * thisPreset
     Serial.print("Storing Preset at index ");
     Serial.println(index);
     EEPROM.write(NB_PRESET_ADDRESS, notePresets_.size());
-   // EEPROM.commit();  
     EEPROM.end();
 }
 
@@ -126,8 +139,23 @@ void LaserKeyboard::setup()
   myOSCManager_->setup();
 }
 
+void LaserKeyboard::buildMidiToNoteMap()
+{
+  for(int noteNb = 0; noteNb < 12; noteNb++)
+  {
+     for (int octaveNb = 0; octaveNb < 8; octaveNb ++)
+     {
+         midiToNoteMap[21 + octaveNb*12 + noteNb] = octaveNotes[noteNb] + octaveNb;
+     }
+  }
+}
+String LaserKeyboard::getNoteFromMidiNb(int midiValue)
+{
+    if(midiValue >= 21 and midiValue <= 127)
+      return midiToNoteMap[midiValue];
 
-
+    return "O";
+}
   
 /*void LaserKeyboard::setBeamIdToNote(int beamId, int note)
 {
@@ -203,7 +231,7 @@ void LaserKeyboard::loop()
       countSinceLastTriggerMap[i]++;
 
       //keep the trigger on debounce fog hazard
-      if(countSinceLastTriggerMap[i] < 20)
+      if(countSinceLastTriggerMap[i] < TRIGGER_DEBOUNCE_VALUE)
       {
         currentBeamStatus_ = 1;
       }

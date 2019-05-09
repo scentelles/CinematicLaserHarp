@@ -7,10 +7,17 @@
 
 #define NB_BEAM 7
 #define BANK_SIZE 32
-#define NB_PRESET_ADDRESS 31
+#define NB_PRESETS 31
+#define NB_PRESET_ADDRESS NB_PRESETS
+
+//TODO: put debounce value in EEPROM SETTINGS
+#define TRIGGER_DEBOUNCE_VALUE 10
 
 //TODO: put definition in common
 #define LCD_CUSTOM_NOTE 0
+
+const String octaveNotes[12] = {"A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"};
+const std::array<int, NB_BEAM> defaultNotes = {36, 48, 60, 62, 64, 65, 67}; //default to C scale
 
 class LaserKeyboard{
   public:
@@ -20,6 +27,7 @@ class LaserKeyboard{
   
   int currentPreset_ = 0;
   LiquidCrystal_I2C * lcd_;
+  String midiToNoteMap[127];
   
   int beamIdToNoteMap[NB_BEAM];
   int beamToPinMap[NB_BEAM];
@@ -33,6 +41,9 @@ class LaserKeyboard{
   public:
   LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDisplay);
   void setup();
+  void buildMidiToNoteMap();
+  String getNoteFromMidiNb(int midiValue);
+  //TODO : implement a reset preset method
   void loadPreset(int presetIndex);
   void storePreset(int index, std::array<int, NB_BEAM> * thisPreset);
   void readAllPresetsFromROM();

@@ -132,6 +132,7 @@ void setup() {
    //setup LCD
 
     lcd.createChar(LCD_CUSTOM_NOTE, note); // Sends the custom char to lcd
+    delay(100); // wait a little bit to avoid having corrupted display custom char
     lcd.begin();
     // Turn on the blacklight and print a message.
     lcd.backlight();
@@ -286,7 +287,8 @@ void stateMachineStateAction(int state)
           lcd.print("BEAM ");
           lcd.print(currentLHBeamEditing);
           lcd.print(" : ");
-          lcd.print(myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing] += editValue); 
+          myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing] += editValue;
+          lcd.print(myLaserKeyboard_p->getNoteFromMidiNb(myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing])); 
           editValue = 0;    
           lcd.blink();
 
@@ -299,7 +301,7 @@ void stateMachineStateAction(int state)
           lcd.print("SAVED :PS ");  
           tempIndex = myLaserKeyboard_p->getCurrentPreset();
           lcd.print(tempIndex);
-          myLaserKeyboard_p->storePreset(tempIndex -1,  &(myLaserKeyboard_p->notePresets_[tempIndex]));
+          myLaserKeyboard_p->storePreset(tempIndex,  &(myLaserKeyboard_p->notePresets_[tempIndex]));
           lcd.blink();
           delay(3000);
           stateMachineStateAction(HMI_LASERHARP_IDLE);

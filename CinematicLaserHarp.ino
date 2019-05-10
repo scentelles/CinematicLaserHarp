@@ -130,10 +130,11 @@ void setup() {
     }
 
    //setup LCD
-
-    lcd.createChar(LCD_CUSTOM_NOTE, note); // Sends the custom char to lcd
-    delay(100); // wait a little bit to avoid having corrupted display custom char
     lcd.begin();
+    lcd.createChar(LCD_CUSTOM_NOTE, note); // Sends the custom char to lcd
+    delay(500); // wait a little bit to avoid having corrupted display custom char
+
+    lcd.clear();
     // Turn on the blacklight and print a message.
     lcd.backlight();
     lcd.setCursor(3, 0);
@@ -268,12 +269,8 @@ void stateMachineStateAction(int state)
         case HMI_LASERHARP_ONGOING: 
               
           lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("LASERHARP:PS ");  
-          lcd.print(myLaserKeyboard_p->getCurrentPreset());
           myLaserHarpFixture.setLaserHarpInitPosition();
           myLaserHarpFixture.powerAllBeams(true);
-          lcd.blink();
 
           break;
 

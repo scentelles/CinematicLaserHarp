@@ -50,6 +50,7 @@ void LaserKeyboard::readAllPresetsFromROM()
     Serial.println(nbPresetFromROM);
     if(nbPresetFromROM < 1 || nbPresetFromROM > NB_PRESETS)
     {
+        Serial.println("Initializing LaserHarp preset bank with default preset");
         nbPresetFromROM = 1;
         notePresets_.push_back(defaultNotes);
     }
@@ -171,9 +172,58 @@ void LaserKeyboard::displayBeamStatus(int beamId)
   
 }
 
+/*
+ * if (beamIndex < 4)
+  {
+    row = 0;
+    column = beamIndex*4;
+  }
+  else
+  {
+    row = 1;
+    column = 2 + beamIndex*4 - 16;
+  }
+ */
+void LaserKeyboard::getCurserPositionForBeam(int beamIndex, int & column, int & row)
+{
+  switch (beamIndex)
+  {
+      case 0:
+        column = 0;
+        row    = 0;
+      break;
+      case 2:
+        column = 4;
+        row    = 0;
+      break;
+      case 4:
+        column = 8;
+        row    = 0;
+      break;
+      case 6:
+        column = 12;
+        row    = 0; 
+      break;
+      case 1:
+        column = 2;
+        row    = 1; 
+      break;
+      case 3:
+        column = 6;
+        row    = 1; 
+      break;
+      case 5:
+        column = 10;
+        row    = 1; 
+      break;
+        
+  }
+    
+}
+
 void LaserKeyboard::process_beam_event(int beamId, bool value)
 {
-      //  sendCC(51, newFilter);
+                 
         Serial.print("LaserKeyboard::process_beam_event : ");
         Serial.print(beamId);
         Serial.print(" : ");
@@ -181,13 +231,16 @@ void LaserKeyboard::process_beam_event(int beamId, bool value)
         Serial.print("Current Preset : ");
         Serial.println(currentPreset_);
         int currentNote = notePresets_[currentPreset_][beamId];
-        
+        int thisRow, thisColumn;
         if(value)
         {
             myOSCManager_->sendNote(currentNote, 120, 0);
             if(lcd_)
             {
-               lcd_->setCursor(beamId*2,1);
+               getCurserPositionForBeam(beamId, thisColumn, thisRow);
+               lcd_->setCursor(thisColumn,thisRow);
+               lcd_->print((char)LCD_CUSTOM_NOTE);
+               lcd_->print(getNoteFromMidiNb(currentNote));
                lcd_->print((char)LCD_CUSTOM_NOTE);
             }
         }
@@ -196,8 +249,10 @@ void LaserKeyboard::process_beam_event(int beamId, bool value)
             myOSCManager_->sendNote(currentNote, 0, 0);
             if(lcd_)
             {
-               lcd_->setCursor(beamId*2,1);
-               lcd_->print(" ");
+               getCurserPositionForBeam(beamId, thisColumn, thisRow);
+               lcd_->setCursor(thisColumn,thisRow);
+               lcd_->print("    ");
+
             }
         }
 }

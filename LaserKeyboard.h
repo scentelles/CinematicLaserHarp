@@ -53,5 +53,8 @@ class LaserKeyboard{
   //void setBeamIdToNote(int beamId, int note);
   void process_beam_event(int beamId, bool value);
   void displayBeamStatus(int beamId);
+
+  private:
+  void getCurserPositionForBeam(int beamIndex, int & column, int &row);
   
 };

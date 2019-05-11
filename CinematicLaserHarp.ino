@@ -23,13 +23,6 @@ IPAddress * remoteIPAddressConfig;
 bool shouldSaveConfig = false;
 
 
-
-//char ssid[] = "slyzic-hotspot";                   // your network SSID (name)
-//char pass[] = "totototo";       // your network password
-
-//char ssid[] = "SFR_34A8";                   // your network SSID (name)
-//char pass[] = "ab4ingrograstanstorc";       // your network password
-
 //I2C configuration
 const int sclPin = D1;
 const int sdaPin = D2;

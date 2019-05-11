@@ -39,7 +39,7 @@ class LaserKeyboard{
   Adafruit_MCP23017 * mcp_;
 
   public:
-  LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDisplay);
+  LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDisplay, IPAddress* remoteIPAddress);
   void setup();
   void buildMidiToNoteMap();
   String getNoteFromMidiNb(int midiValue);

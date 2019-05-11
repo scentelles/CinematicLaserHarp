@@ -2,7 +2,7 @@
 
 
 
-LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDisplay)
+LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDisplay, IPAddress* remoteIPAddress)
 {
 
   lcd_ = lcdDisplay;
@@ -31,7 +31,7 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
 
   //TODO : put this into WifiManager config
   //IPAddress* remoteIPAddress = new IPAddress(192,168,1,51);
-  IPAddress* remoteIPAddress = new IPAddress(192,168,1,21); //beelink
+ // IPAddress* remoteIPAddress = new IPAddress(192,168,1,21); //beelink
   // IPAddress* remoteIPAddress = new IPAddress(192,168,1,64);
   myOSCManager_ = new OSCManager(remoteIPAddress, 8000, 8888);
   mcp_ = mcp;

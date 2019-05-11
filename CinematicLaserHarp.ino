@@ -1,4 +1,8 @@
+#include <FS.h>                   //this needs to be first, or it all crashes and burns...
 #include <ESP8266WiFi.h>
+
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
 #include <LiquidCrystal_I2C.h>
 
@@ -11,13 +15,22 @@
 #include <Artnet.h>
 Artnet artnet;
 
+int ip[4];
+char osc_remote_IP[40];
+IPAddress * remoteIPAddressConfig;
+
+//flag for saving data
+bool shouldSaveConfig = false;
+
+
 
 //char ssid[] = "slyzic-hotspot";                   // your network SSID (name)
 //char pass[] = "totototo";       // your network password
 
-char ssid[] = "SFR_34A8";                   // your network SSID (name)
-char pass[] = "ab4ingrograstanstorc";       // your network password
+//char ssid[] = "SFR_34A8";                   // your network SSID (name)
+//char pass[] = "ab4ingrograstanstorc";       // your network password
 
+//I2C configuration
 const int sclPin = D1;
 const int sdaPin = D2;
 
@@ -35,7 +48,7 @@ int  previousButtonState = 0;
 int  newButtonState = 0; 
 int  buttonSameStateCount = 0;
 
-IPAddress  localAddress(0,0,0,0);
+//IPAddress  localAddress(0,0,0,0);
 
 #define HMI_IDLE 0
 #define HMI_SEQUENCE_IDLE 1
@@ -43,7 +56,6 @@ IPAddress  localAddress(0,0,0,0);
 #define HMI_DMX_IDLE 3
 #define HMI_DMX_ONGOING 4
 #define HMI_SETTINGS_IDLE 5
-#define HMI_SETTINGS_WIFI 6
 #define HMI_INFO 7
 #define HMI_LASERHARP_IDLE 8
 #define HMI_LASERHARP_ONGOING 9
@@ -73,7 +85,7 @@ Adafruit_MCP23017 mcp;
 LiquidCrystal_I2C lcd(LCD_I2C_ADDR,16,2);  // set the LCD for a 16 chars and 2 line display
 uint8_t bell[8] = {0x4,0xe,0xe,0xe,0x1f,0x0,0x4};
 uint8_t note[8] = {0x2,0x3,0x2,0xe,0x1e,0xc,0x0};
-uint8_t clock[8] = {0x0,0xe,0x15,0x17,0x11,0xe,0x0};
+//uint8_t clock[8] = {0x0,0xe,0x15,0x17,0x11,0xe,0x0};
 uint8_t heart[8] = {0x0,0xa,0x1f,0x1f,0xe,0x4,0x0};
 uint8_t duck[8] = {0x0,0xc,0x1d,0xf,0xf,0x6,0x0};
 uint8_t check[8] = {0x0,0x1,0x3,0x16,0x1c,0x8,0x0};
@@ -87,6 +99,39 @@ uint8_t retarrow[8] = { 0x1,0x1,0x5,0x9,0x1f,0x8,0x4};
 #define   BUTTON_LEFT 3  /*!< Bouton LEFT (gauche) */
 #define   BUTTON_RIGHT 4 /*!< Bouton RIGHT (droite) */
 #define   BUTTON_SELECT 5 /*!< Bouton SELECT */
+
+
+//WIFI Manager callbacks
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Saving config");
+  delay(1000);
+
+
+}
+
+void configModeCallback (WiFiManager *myWiFiManager) {
+  
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("No Wifi found");
+  lcd.setCursor(0,1);
+  lcd.print("Starting AP");
+  delay(2000);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print(myWiFiManager->getConfigPortalSSID());
+  lcd.setCursor(0,1);
+  lcd.print(WiFi.softAPIP());
+  
+}
 
 byte getPressedButton() {
 
@@ -111,6 +156,10 @@ byte getPressedButton() {
   else
     return BUTTON_NONE;
 }
+
+
+
+
 void setup() {
     Serial.begin(115200);
 
@@ -146,55 +195,128 @@ void setup() {
     
     delay(2000);
 
+//============================================================
+//WIFI CONFIGURATION 
+//============================================================  
+  //read configuration from FS json
+  Serial.println("mounting FS...");
 
-    // Connect to WiFi network
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, pass);
+  if (SPIFFS.begin()) {
+    Serial.println("mounted file system");
+    if (SPIFFS.exists("/config.json")) {
+      //file exists, reading and loading
+      Serial.println("reading config file");
+     // SPIFFS.remove("/config.json");
+      exit;
+      File configFile = SPIFFS.open("/config.json", "r");
+      if (configFile) {
+        Serial.println("opened config file");
+        size_t size = configFile.size();
+        // Allocate a buffer to store contents of the file.
+        std::unique_ptr<char[]> buf(new char[size]);
 
+        configFile.readBytes(buf.get(), size);
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& json = jsonBuffer.parseObject(buf.get());
+        json.printTo(Serial);
+        if (json.success()) {
+          Serial.println("\nparsed json");
+
+          strcpy(osc_remote_IP, json["osc_remote_IP"]);
+
+        } else {
+          Serial.println("failed to load json config");
+        }
+        configFile.close();
+      }
+    }
+  } else {
+    Serial.println("failed to mount FS");
+  }
+  //end read
+
+  WiFiManager wifiManager;
+  wifiManager.setBreakAfterConfig(true);
+  //reset saved settings
+  //wifiManager.resetSettings();
+  
+  WiFiManagerParameter OSC_remoteaddress("OSC_IP", "OSC remote address", osc_remote_IP, 40);
+  wifiManager.addParameter(&OSC_remoteaddress);
+  
+  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  wifiManager.setAPCallback(configModeCallback);
+
+  //set config save notify callback
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+ // wifiManager.setSaveParamsCallback(saveParamsCallback);
+
+
+  //fetches ssid and tries to connect
+  //if it does not connect it starts an access point
+  //and goes into a blocking loop awaiting configuration
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("CONNECTING...");  
+  lcd.blink();
+  if (!wifiManager.autoConnect("LASERHARP_CONFIG")) {
+    //Saving confg in all cases
+    Serial.println("saving config");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& json = jsonBuffer.createObject();
+    Serial.print("New remote IP : ");
+    Serial.println(OSC_remoteaddress.getValue());
+    json["osc_remote_IP"] = OSC_remoteaddress.getValue();
+    File configFile = SPIFFS.open("/config.json", "w");
+    if (!configFile) {
+      Serial.println("failed to open config file for writing");
+    }
+
+    json.printTo(Serial);
+    json.printTo(configFile);
+    configFile.close();
+    //end save
+    
     lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Connecting...");
+    lcd.setCursor(0, 0);
+    lcd.print("RESTARTING...");
+    delay(2000);
+    ESP.restart();
 
+  }
 
-    int nbConnectionTry = 0;
-    while ((WiFi.status() != WL_CONNECTED) and (nbConnectionTry < NB_MAX_CONNECTION_RETRY)){
-        delay(500);
-        Serial.print(".");
-        lcd.setCursor(nbConnectionTry,1);
-        lcd.print(".");
-        
-        nbConnectionTry++;
-       
-    }
-    if(WiFi.status() == WL_CONNECTED)
-    {
-      Serial.println("");
-      Serial.println("WiFi connected");
-      Serial.println("IP address: ");
-      localAddress = WiFi.localIP();
-      Serial.println(localAddress);
-      
-    }
+  //if you get here you have connected to the WiFi
+    Serial.println("CONNECTED!");
+    Serial.println("local ip");
+    Serial.println(WiFi.localIP());
     
-
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("CONNECTED !");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.SSID());
+    delay(1500);
     
+  //read updated parameters
+  strcpy(osc_remote_IP, OSC_remoteaddress.getValue());
 
-    //initialize fixture positions and state
+ 
+  Serial.println("parsing IP address from config");
+  sscanf(osc_remote_IP, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+  remoteIPAddressConfig = new IPAddress(ip[0], ip[1], ip[2], ip[3]);
+
+
+//==============================================================
+//                    INIT 
+//==============================================================
+
     myLaserHarpFixture.setup();
-
-
 
     mySequencer_p = new Sequencer((std::vector<Fixture*>*)&(myLaserHarpFixture.beamVector));
     mySequencer_p->setupLightSequence();
 
-    //beam keyboard setup
-    myLaserKeyboard_p = new LaserKeyboard(&mcp, &lcd);     
+    myLaserKeyboard_p = new LaserKeyboard(&mcp, &lcd, remoteIPAddressConfig);     
 
     stateMachineStateAction(HMI_IDLE);
-
    
 }
 
@@ -202,7 +324,6 @@ void setup() {
 
 //========================================================
 //Menu state machine
-
 //========================================================
 String buttonToString(int buttonVal)
 {
@@ -233,7 +354,7 @@ void stateMachineStateAction(int state)
          lcd.setCursor(0, 0);
          lcd.print("HOME"); 
          lcd.setCursor(0, 1);    
-         lcd.print(localAddress);  
+         lcd.print( WiFi.localIP());  
          myLaserHarpFixture.resetPosition(); 
        break;
        
@@ -560,12 +681,7 @@ int stateMachineTransition(int buttonVal, int pressType)
                   lcd.print("START SEQUENCE");                
                break; 
                case BUTTON_SELECT:
-                  HMI_State = HMI_SETTINGS_WIFI;
-                  lcd.clear();
-                  lcd.setCursor(0, 0);
-                  lcd.print("WIFI ACCESS POINT");  
-                  lcd.setCursor(0, 1);
-                  lcd.print(ssid);                    
+               
                break; 
            }
        break;

@@ -15,12 +15,6 @@
 #include <Artnet.h>
 Artnet artnet;
 
-int ip[4];
-char osc_remote_IP[40];
-IPAddress * remoteIPAddressConfig;
-
-//flag for saving data
-bool shouldSaveConfig = false;
 
 
 //I2C configuration
@@ -40,8 +34,6 @@ int buttonPressRequestType = 0;
 int  previousButtonState = 0;  
 int  newButtonState = 0; 
 int  buttonSameStateCount = 0;
-
-//IPAddress  localAddress(0,0,0,0);
 
 #define HMI_IDLE 0
 #define HMI_SEQUENCE_IDLE 1
@@ -93,6 +85,15 @@ uint8_t retarrow[8] = { 0x1,0x1,0x5,0x9,0x1f,0x8,0x4};
 #define   BUTTON_RIGHT 4 /*!< Bouton RIGHT (droite) */
 #define   BUTTON_SELECT 5 /*!< Bouton SELECT */
 
+//===============================================================
+//WifiManager definitions
+//===============================================================
+int ip[4];
+char osc_remote_IP[40];
+IPAddress * remoteIPAddressConfig;
+
+//flag for saving data
+bool shouldSaveConfig = false;
 
 //WIFI Manager callbacks
 //callback notifying us of the need to save config
@@ -103,7 +104,6 @@ void saveConfigCallback () {
   lcd.setCursor(0,0);
   lcd.print("Saving config");
   delay(1000);
-
 
 }
 
@@ -126,37 +126,9 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   
 }
 
-byte getPressedButton() {
-
-  /* Lit l'état des boutons */
-  int value = analogRead(A0);
- //Serial.println(value);
-  /* Calcul l'état des boutons */
-  if (value < 50)
-    return BUTTON_RIGHT;
-  else if (value < 380){
-    Serial.print("Analog value");
-    Serial.println(value);
-    return BUTTON_UP;}
-  else if (value < 500){
-    Serial.print("Analog value");
-    Serial.println(value);
-    return BUTTON_DOWN;}
-  else if (value < 700)
-    return BUTTON_LEFT;
-  else if (value < 950)
-    return BUTTON_SELECT;
-  else
-    return BUTTON_NONE;
-}
-
-
-
-
 void setup() {
     Serial.begin(115200);
-
-   
+       
     //Start I2C
     Wire.begin(sdaPin, sclPin);
     
@@ -171,13 +143,13 @@ void setup() {
         mcp.pullUp(i, HIGH); 
     }
 
-   //setup LCD
+    //setup LCD
     lcd.begin();
     lcd.createChar(LCD_CUSTOM_NOTE, note); // Sends the custom char to lcd
     delay(500); // wait a little bit to avoid having corrupted display custom char
 
     lcd.clear();
-    // Turn on the blacklight and print a message.
+    // Turn on the blacklight and print init message.
     lcd.backlight();
     lcd.setCursor(3, 0);
     lcd.print("Cinematic");
@@ -199,7 +171,7 @@ void setup() {
     if (SPIFFS.exists("/config.json")) {
       //file exists, reading and loading
       Serial.println("reading config file");
-     // SPIFFS.remove("/config.json");
+      // SPIFFS.remove("/config.json");
       exit;
       File configFile = SPIFFS.open("/config.json", "r");
       if (configFile) {
@@ -214,16 +186,18 @@ void setup() {
         json.printTo(Serial);
         if (json.success()) {
           Serial.println("\nparsed json");
-
           strcpy(osc_remote_IP, json["osc_remote_IP"]);
-
-        } else {
+        } 
+        else 
+        {
           Serial.println("failed to load json config");
         }
         configFile.close();
       }
     }
-  } else {
+  } 
+  else 
+  {
     Serial.println("failed to mount FS");
   }
   //end read
@@ -241,7 +215,7 @@ void setup() {
 
   //set config save notify callback
   wifiManager.setSaveConfigCallback(saveConfigCallback);
- // wifiManager.setSaveParamsCallback(saveParamsCallback);
+  // wifiManager.setSaveParamsCallback(saveParamsCallback);
 
 
   //fetches ssid and tries to connect
@@ -252,7 +226,7 @@ void setup() {
   lcd.print("CONNECTING...");  
   lcd.blink();
   if (!wifiManager.autoConnect("LASERHARP_CONFIG")) {
-    //Saving confg in all cases
+    //Saving config in all cases
     Serial.println("saving config");
     DynamicJsonBuffer jsonBuffer;
     JsonObject& json = jsonBuffer.createObject();
@@ -278,20 +252,19 @@ void setup() {
   }
 
   //if you get here you have connected to the WiFi
-    Serial.println("CONNECTED!");
-    Serial.println("local ip");
-    Serial.println(WiFi.localIP());
+  Serial.println("CONNECTED!");
+  Serial.println("local ip");
+  Serial.println(WiFi.localIP());
     
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("CONNECTED !");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.SSID());
-    delay(1500);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("CONNECTED !");
+  lcd.setCursor(0, 1);
+  lcd.print(WiFi.SSID());
+  delay(1500);
     
   //read updated parameters
   strcpy(osc_remote_IP, OSC_remoteaddress.getValue());
-
  
   Serial.println("parsing IP address from config");
   sscanf(osc_remote_IP, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
@@ -318,6 +291,31 @@ void setup() {
 //========================================================
 //Menu state machine
 //========================================================
+
+byte getPressedButton() {
+
+  /* Lit l'état des boutons */
+  int value = analogRead(A0);
+ //Serial.println(value);
+  /* Calcul l'état des boutons */
+  if (value < 50)
+    return BUTTON_RIGHT;
+  else if (value < 380){
+    Serial.print("Analog value");
+    Serial.println(value);
+    return BUTTON_UP;}
+  else if (value < 500){
+    Serial.print("Analog value");
+    Serial.println(value);
+    return BUTTON_DOWN;}
+  else if (value < 700)
+    return BUTTON_LEFT;
+  else if (value < 950)
+    return BUTTON_SELECT;
+  else
+    return BUTTON_NONE;
+}
+
 String buttonToString(int buttonVal)
 {
   switch(buttonVal)
@@ -357,7 +355,7 @@ void stateMachineStateAction(int state)
          lcd.print("SEQUENCE"); 
          lcd.setCursor(0, 1);    
          lcd.print("SELECT TO START");   
-         break;
+       break;
        
        case HMI_SEQUENCE_ONGOING:
          lcd.clear();
@@ -367,118 +365,110 @@ void stateMachineStateAction(int state)
          lcd.blink();
          
          mySequencer_p->startLightSequence(true); 
-         break;
+       break;
 
-        case HMI_LASERHARP_IDLE:
-           lcd.clear();
-           lcd.noBlink();
-           lcd.setCursor(0, 0);
-           lcd.print("SELECT LASERHARP");  
-           lcd.setCursor(0, 1);
-           //currentLHNotes = currentLHNotes[currentLHNotes];
-           lcd.print(myLaserKeyboard_p->getCurrentPreset());              
-           myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset());  
-                    
-           break;
-        case HMI_LASERHARP_ONGOING: 
-              
-          lcd.clear();
-          myLaserHarpFixture.setLaserHarpInitPosition();
-          myLaserHarpFixture.powerAllBeams(true);
+       case HMI_LASERHARP_IDLE:
+         lcd.clear();
+         lcd.noBlink();
+         lcd.setCursor(0, 0);
+         lcd.print("SELECT LASERHARP");  
+         lcd.setCursor(0, 1);
+         lcd.print(myLaserKeyboard_p->getCurrentPreset());              
+       
+         myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset());  
+       break;
+          
+       case HMI_LASERHARP_ONGOING: 
+         lcd.clear();
+       
+         myLaserHarpFixture.setLaserHarpInitPosition();
+         myLaserHarpFixture.powerAllBeams(true);
+       break;
 
-          break;
+       case HMI_LASERHARP_EDIT: 
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("EDITING :PS ");  
+         lcd.print(myLaserKeyboard_p->getCurrentPreset());
+         lcd.setCursor(0, 1);   
+         lcd.print("BEAM ");
+         lcd.print(currentLHBeamEditing);
+         lcd.print(" : ");
+         myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing] += editValue;
+         lcd.print(myLaserKeyboard_p->getNoteFromMidiNb(myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing])); 
+         editValue = 0;    
+         lcd.blink();
+       break;        
 
-        case HMI_LASERHARP_EDIT: 
-              
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("EDITING :PS ");  
-          lcd.print(myLaserKeyboard_p->getCurrentPreset());
-          lcd.setCursor(0, 1);   
-          lcd.print("BEAM ");
-          lcd.print(currentLHBeamEditing);
-          lcd.print(" : ");
-          myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing] += editValue;
-          lcd.print(myLaserKeyboard_p->getNoteFromMidiNb(myLaserKeyboard_p->notePresets_[myLaserKeyboard_p->getCurrentPreset()][currentLHBeamEditing])); 
-          editValue = 0;    
-          lcd.blink();
+       case HMI_LASERHARP_SAVING: 
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("SAVED :PS ");  
+         tempIndex = myLaserKeyboard_p->getCurrentPreset();
+         lcd.print(tempIndex);
+         myLaserKeyboard_p->storePreset(tempIndex,  &(myLaserKeyboard_p->notePresets_[tempIndex]));
+         lcd.blink();
+         delay(3000);
+          
+         stateMachineStateAction(HMI_LASERHARP_IDLE);
+       break;    
 
-          break;        
+       case HMI_LASERHARP_SAVING_NEW: 
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("NEW PRESET :PS ");  
+         myLaserKeyboard_p->addPresetFromCurrent(); //TODO use temporary preset instead
+         myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->notePresets_.size()-1);
+         lcd.print(myLaserKeyboard_p->getCurrentPreset());
+         lcd.blink();
+         delay(2000);
 
-        case HMI_LASERHARP_SAVING: 
-              
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("SAVED :PS ");  
-          tempIndex = myLaserKeyboard_p->getCurrentPreset();
-          lcd.print(tempIndex);
-          myLaserKeyboard_p->storePreset(tempIndex,  &(myLaserKeyboard_p->notePresets_[tempIndex]));
-          lcd.blink();
-          delay(3000);
-          stateMachineStateAction(HMI_LASERHARP_IDLE);
-          break;    
+         stateMachineStateAction(HMI_LASERHARP_IDLE);
+       break; 
 
-        case HMI_LASERHARP_SAVING_NEW: 
-              
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("NEW PRESET :PS ");  
-          myLaserKeyboard_p->addPresetFromCurrent(); //TODO use temporary preset instead
-          myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->notePresets_.size()-1);
-          lcd.print(myLaserKeyboard_p->getCurrentPreset());
+       case HMI_SETTINGS_CALIBRATION_IDLE: 
+         currentLHBeamEditing = 0;
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("BEAM CALIBRATION ");  
+       break;
 
-          lcd.blink();
-          delay(2000);
-          stateMachineStateAction(HMI_LASERHARP_IDLE);
-          break; 
+       case HMI_SETTINGS_CALIBRATION_EDIT: 
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("BEAM CALIBRATION ");  
+         lcd.setCursor(0, 1);   
+         lcd.print("BEAM ");
+         lcd.print(currentLHBeamEditing);
+         lcd.print(" : ");
+         newOffset = myLaserHarpFixture.beamVector[currentLHBeamEditing]->getPositionOffset() + editValue;
+         myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPositionOffset(newOffset);
+         myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPosition(CENTER_POSITION);
+         lcd.print(newOffset); 
+         editValue = 0;    
+         lcd.blink();
+       break;
 
-        case HMI_SETTINGS_CALIBRATION_IDLE: 
-          currentLHBeamEditing = 0;
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("BEAM CALIBRATION ");  
-             
-          break;
+       case HMI_SETTINGS_CALIBRATION_SAVING: 
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("SAVING CALIBRATION");  
+         lcd.blink();
+         delay(3000);
 
-        case HMI_SETTINGS_CALIBRATION_EDIT: 
-              
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("BEAM CALIBRATION ");  
-          lcd.setCursor(0, 1);   
-          lcd.print("BEAM ");
-          lcd.print(currentLHBeamEditing);
-          lcd.print(" : ");
-          newOffset = myLaserHarpFixture.beamVector[currentLHBeamEditing]->getPositionOffset() + editValue;
-          myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPositionOffset(newOffset);
-          myLaserHarpFixture.beamVector[currentLHBeamEditing]->setPosition(CENTER_POSITION);
-          lcd.print(newOffset); 
-          editValue = 0;    
-          lcd.blink();
-
-          break;
-
-         case HMI_SETTINGS_CALIBRATION_SAVING: 
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("SAVED : CALIBRATION ");  
-
-
-          myLaserHarpFixture.storeCalibration();
-          lcd.blink();
-          delay(3000);
-          stateMachineStateAction(HMI_SETTINGS_CALIBRATION_IDLE);
-
-         break;
+         myLaserHarpFixture.storeCalibration();
+         stateMachineStateAction(HMI_SETTINGS_CALIBRATION_IDLE);
+       break;
          
-        default :
-          Serial.print("ERROR: state action unknown : ");
-          Serial.println(state);
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("ERROR: state action unknown : ");
-          lcd.println(state);    
-          break;       
+       default :
+         Serial.print("ERROR: state action unknown : ");
+         Serial.println(state);
+         lcd.clear();
+         lcd.setCursor(0, 0);
+         lcd.print("ERROR : FSM");
+         lcd.setCursor(0, 1);
+         lcd.println(state);    
+       break;       
    }
 }
 
@@ -499,7 +489,8 @@ int stateMachineTransition(int buttonVal, int pressType)
                   lcd.clear();
                   lcd.setCursor(0, 0);
                   lcd.print("SETTINGS");                                   
-               break; 
+               break;
+                
                case BUTTON_SELECT:
                   HMI_State = HMI_INFO;
                   lcd.clear();
@@ -518,22 +509,24 @@ int stateMachineTransition(int buttonVal, int pressType)
                   //stateMachineStateAction(HMI_SEQUENCE_IDLE);   
                   stateMachineStateAction(HMI_SEQUENCE_ONGOING);    
                break; 
+               
                case BUTTON_UP:
                    stateMachineStateAction(HMI_IDLE);                
                break; 
+               
                case BUTTON_SELECT:
                    if(pressType == SHORT_PRESS)
                        stateMachineStateAction(HMI_LASERHARP_ONGOING);  
                    else
                        stateMachineStateAction(HMI_LASERHARP_EDIT);  
-                                    
                break; 
+
                case BUTTON_RIGHT:
                    myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset() + 1);
                    stateMachineStateAction(HMI_LASERHARP_IDLE);                   
                break; 
+               
                case BUTTON_LEFT:
-                   
                    myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset() - 1);                  
                    stateMachineStateAction(HMI_LASERHARP_IDLE); 
                break;                
@@ -547,24 +540,27 @@ int stateMachineTransition(int buttonVal, int pressType)
                   editValue = -1;
                   stateMachineStateAction(HMI_LASERHARP_EDIT);    
                break; 
+               
                case BUTTON_UP:
                   editValue = 1;
                   stateMachineStateAction(HMI_LASERHARP_EDIT);                
                break; 
+               
                case BUTTON_LEFT:
                   currentLHBeamEditing -= 1;
                   stateMachineStateAction(HMI_LASERHARP_EDIT);                
                break; 
+               
                case BUTTON_RIGHT:
                   currentLHBeamEditing += 1;
                   stateMachineStateAction(HMI_LASERHARP_EDIT);                
                break; 
+               
                case BUTTON_SELECT:
                    if(pressType == SHORT_PRESS)
                        stateMachineStateAction(HMI_LASERHARP_SAVING);  
                    else
                        stateMachineStateAction(HMI_LASERHARP_SAVING_NEW);  
-                                    
                break;          
            }
        break;
@@ -574,13 +570,10 @@ int stateMachineTransition(int buttonVal, int pressType)
            //todo : stop OSC
            if(buttonVal == BUTTON_RIGHT)
            {
-           myLaserHarpFixture.powerAllBeams(false);
-           stateMachineStateAction(HMI_LASERHARP_IDLE);
+             myLaserHarpFixture.powerAllBeams(false);
+             stateMachineStateAction(HMI_LASERHARP_IDLE);
            }  
        break;
- 
-       
-       
        
        case HMI_SEQUENCE_IDLE:
            switch(buttonVal)
@@ -591,9 +584,11 @@ int stateMachineTransition(int buttonVal, int pressType)
                   lcd.setCursor(0, 0);
                   lcd.print("START DMX");   
                break; 
+               
                case BUTTON_UP:
                   stateMachineStateAction(HMI_LASERHARP_IDLE);                         
                break; 
+               
                case BUTTON_SELECT:
                   stateMachineStateAction(HMI_SEQUENCE_ONGOING);  
                break; 
@@ -619,9 +614,11 @@ int stateMachineTransition(int buttonVal, int pressType)
                   lcd.setCursor(0, 0);
                   lcd.print("SETTINGS");  
                break; 
+               
                case BUTTON_UP:
                   stateMachineStateAction(HMI_SEQUENCE_IDLE);                
                break; 
+               
                case BUTTON_SELECT:
                   HMI_State = HMI_DMX_ONGOING;
                   lcd.clear();
@@ -630,13 +627,12 @@ int stateMachineTransition(int buttonVal, int pressType)
                   lcd.setCursor(0, 1);
                   lcd.print("ADDRESS : ");
                   lcd.print(myLaserHarpFixture.getDmxAddress());
-                  //SetupArtnet
+
                   artnet.begin();
-                  
-                   
                break; 
            }
        break;
+       
        case HMI_DMX_ONGOING:
            switch(buttonVal)
            {
@@ -646,10 +642,12 @@ int stateMachineTransition(int buttonVal, int pressType)
                   lcd.setCursor(0, 0);
                   lcd.print("SETTINGS");  
                break; 
+               
                case BUTTON_UP:
                   //TODO : stop DMX
                   stateMachineStateAction(HMI_SEQUENCE_IDLE);             
                break; 
+               
                case BUTTON_SELECT:
                   HMI_State = HMI_DMX_IDLE;
                   lcd.clear();
@@ -658,21 +656,22 @@ int stateMachineTransition(int buttonVal, int pressType)
                break; 
            }
        break;
-
              
-       case HMI_SETTINGS_IDLE:
+       case HMI_SETTINGS_IDLE: //TODO: add settings (debouncing value, DMX address, artnet address?)
            switch(buttonVal)
            {
                case BUTTON_DOWN:
                 //  stateMachineStateAction(HMI_SETTINGS_CALIBRATION_IDLE);    
                   stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);   
-               break; 
+               break;
+                
                case BUTTON_UP:
                   HMI_State = HMI_DMX_IDLE;  
                   lcd.clear();
                   lcd.setCursor(0, 0);
                   lcd.print("START SEQUENCE");                
                break; 
+               
                case BUTTON_SELECT:
                
                break; 
@@ -685,14 +684,17 @@ int stateMachineTransition(int buttonVal, int pressType)
                case BUTTON_UP:
                   stateMachineStateAction(HMI_SETTINGS_IDLE);    
                break; 
+               
                case BUTTON_DOWN:
                   stateMachineStateAction(HMI_IDLE);    
                break; 
+               
                case BUTTON_SELECT:
                    stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);  
                break;          
            }
-       break;   
+       break;  
+        
        case HMI_SETTINGS_CALIBRATION_EDIT:
            switch(buttonVal)
            {
@@ -700,10 +702,12 @@ int stateMachineTransition(int buttonVal, int pressType)
                   editValue = -1;
                   stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);    
                break; 
+               
                case BUTTON_UP:
                   editValue = 1;
                   stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);                
                break; 
+               
                case BUTTON_LEFT:
                   if (currentLHBeamEditing > 0)
                   {
@@ -711,6 +715,7 @@ int stateMachineTransition(int buttonVal, int pressType)
                       stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);                
                   }
                break; 
+               
                case BUTTON_RIGHT:
                   if (currentLHBeamEditing < NB_BEAM -1)
                   {
@@ -718,63 +723,39 @@ int stateMachineTransition(int buttonVal, int pressType)
                       stateMachineStateAction(HMI_SETTINGS_CALIBRATION_EDIT);       
                   }         
                break; 
+               
                case BUTTON_SELECT:
                    if(pressType == LONG_PRESS)
                        stateMachineStateAction(HMI_SETTINGS_CALIBRATION_SAVING);  
                    else
                        stateMachineStateAction(HMI_SETTINGS_CALIBRATION_IDLE);  
-                                    
                break;          
            }
        break;   
-   
    }
 }
 
+
+//========================================================
+//                   PROCESSING LOOPS
+//========================================================
 void displayLoop()
 {
   if(buttonPressRequest)
   {
     stateMachineTransition(buttonPressRequest, buttonPressRequestType);
-/*    if(buttonPressRequestType == SHORT_PRESS)
-    {   
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("short ");
-      lcd.setCursor(0, 1);
-      lcd.print(buttonToString(buttonPressRequest));
-    }
-    if(buttonPressRequestType == LONG_PRESS)
-    {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("long ");
-      lcd.setCursor(0, 1);
-      lcd.print(buttonToString(buttonPressRequest));
-     // mySequencer_p->startLightSequence(true);
-   
-    } */ 
-
     buttonPressRequest = 0;
   }  
-  
 }
-
-
-//========================================================
-
 
 void artNetLoop()
 {
    if (artnet.read() == ART_DMX)
-  {
-    
-    //TODO : get Address from config
-    uint8_t* dmxFrames = artnet.getDmxFrame();
-    myLaserHarpFixture.applyDmxCommands(dmxFrames);
-    
+   {
+     //TODO : get Address from config
+     uint8_t* dmxFrames = artnet.getDmxFrame();
+     myLaserHarpFixture.applyDmxCommands(dmxFrames);
   }
-
 }
 
 void ultrasonicLoop()
@@ -782,50 +763,52 @@ void ultrasonicLoop()
   
 }
 
-
 void buttonLoop()
 {
   previousButtonState = newButtonState;  
   newButtonState      = getPressedButton();
 
+  //Short press detection
   if((newButtonState == BUTTON_NONE) && (previousButtonState != BUTTON_NONE))
   {
-       if(!longPressOngoing)
-       {
-         buttonPressRequest = previousButtonState;
-         if(buttonSameStateCount < 100)
-         {
+     if(!longPressOngoing)
+     {
+        buttonPressRequest = previousButtonState;
+        if(buttonSameStateCount < 100)
+        {
            Serial.print("Button short pressed: ");
            Serial.println(previousButtonState);
            buttonPressRequestType = SHORT_PRESS;
-         }
-         buttonSameStateCount = 0;
-       }
-       else
-       {
-         longPressOngoing = false;
-       }
-       
+        }
+        buttonSameStateCount = 0;
+     }
+     else
+     {
+        longPressOngoing = false;
+     }
   }
-  
+
+  //Long press detection
   if((newButtonState == previousButtonState) && (newButtonState != BUTTON_NONE))
   {
     buttonSameStateCount +=1;
-       if(buttonSameStateCount > 100)
-       {
-         Serial.print("Button long pressed : ");
-         Serial.println(previousButtonState);
-         buttonPressRequest = newButtonState;
-         longPressOngoing = true;
-         buttonPressRequestType = LONG_PRESS;    
-         buttonSameStateCount = 0;      
-         newButtonState = BUTTON_NONE;
-         previousButtonState = BUTTON_NONE;
-       }
+    if(buttonSameStateCount > 100)
+    {
+      Serial.print("Button long pressed : ");
+      Serial.println(previousButtonState);
+      buttonPressRequest = newButtonState;
+      longPressOngoing = true;
+      buttonPressRequestType = LONG_PRESS;    
+      buttonSameStateCount = 0;      
+      newButtonState = BUTTON_NONE;
+      previousButtonState = BUTTON_NONE;
+    }
   }
 }
 
-
+//========================================================
+//                   MAIN LOOP
+//========================================================
 void loop() {
   displayLoop();
   buttonLoop();
@@ -836,12 +819,11 @@ void loop() {
   if(HMI_State == HMI_SEQUENCE_ONGOING)
       mySequencer_p->lightSequenceLoop();
 
-  //ultrasonicLoop();
-  //ArtNet input loop
   if(HMI_State == HMI_DMX_ONGOING)
     artNetLoop();
 
+  //ultrasonicLoop();
+  
   delay(10);
-
   
 }

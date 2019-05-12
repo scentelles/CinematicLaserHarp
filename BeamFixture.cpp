@@ -48,18 +48,14 @@ void BeamFixture::setInitPosition()
   Serial.println("BEAM INIT POSITION CALLED FROM BEAMFIXTURE=======================================================");
 
   setPosition(CENTER_POSITION);
-  //pwm_->setPWM(servoNum_, 0, 125 + Fixture::position_*1.5 + positionOffset_);
-
-  
   
 }
 
 void BeamFixture::setPositionOffset(int offset)
 {
   positionOffset_ = offset;
-  //setPosition(offset);
-  
 }
+
 void BeamFixture::setPower(int val)
 {
     //Serial.print("Setting beam power ");

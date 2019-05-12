@@ -12,7 +12,6 @@
 
 class BeamFixture: public Fixture{
   public:
- // bool isOn_ = false;
   int positionOffset_;
   Adafruit_PWMServoDriver * pwm_;
   int servoNum_;

@@ -16,6 +16,7 @@
 //TODO: put definition in common
 #define LCD_CUSTOM_NOTE 0
 
+//TODO : fix notes octave bug : should start @C 
 const String octaveNotes[12] = {"A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"};
 const std::array<int, NB_BEAM> defaultNotes = {36, 48, 60, 62, 64, 65, 67}; //default to C scale
 

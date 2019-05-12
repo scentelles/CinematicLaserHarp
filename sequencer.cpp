@@ -60,21 +60,21 @@ void Sequencer::setupLightSequence()
   for(int i = 0; i < NB_BEAM; i++)
   {
     sequenceBeamPosTarget[i][0] = 64;
-    sequenceBeamLightTarget[i][0] = 0;
+    sequenceBeamLightTarget[i][0] = 127;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][1] = 64;
+    sequenceBeamPosTarget[i][1] = 150;
     sequenceBeamLightTarget[i][1] = 16;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][2] = 64;
+    sequenceBeamPosTarget[i][2] = 200;
     sequenceBeamLightTarget[i][2] = 32;
   }
   for(int i = 0; i < NB_BEAM; i++)
   {
-    sequenceBeamPosTarget[i][3] = 64;
+    sequenceBeamPosTarget[i][3] = 32;
     sequenceBeamLightTarget[i][3] = 48;
   }
   for(int i = 0; i < NB_BEAM; i++)
@@ -207,4 +207,3 @@ void Sequencer::lightSequenceLoop()
     }
   }
 }
-

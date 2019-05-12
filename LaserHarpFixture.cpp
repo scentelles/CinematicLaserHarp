@@ -27,16 +27,7 @@ void LaserHarpFixture::resetPosition()
 
 void LaserHarpFixture::setup()
 {
-
    readCalibrationFromROM();
-  /* beamVector[0]->setPositionOffset(0);
-   beamVector[1]->setPositionOffset(0);
-   beamVector[2]->setPositionOffset(0);
-   beamVector[3]->setPositionOffset(0);
-   beamVector[4]->setPositionOffset(0);
-   beamVector[5]->setPositionOffset(0);
-   beamVector[6]->setPositionOffset(0);
-   storeCalibration();*/
    resetPosition();
 }
 
@@ -88,8 +79,6 @@ void LaserHarpFixture::setLaserHarpInitPosition()
 void LaserHarpFixture::setBeamPosition(int beamId, int position)
 {
     beamVector[beamId]->setPosition(position);
-
-
 }
 
 void LaserHarpFixture::powerAllBeams (bool on_off)
@@ -103,10 +92,7 @@ void LaserHarpFixture::powerAllBeams (bool on_off)
     { 
       beamVector[i]->setPower(powerValue);
     }
-  
 }
-
-
 
 void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
 {
@@ -126,4 +112,3 @@ int LaserHarpFixture::getDmxAddress()
     return DMX_ADDRESS;  
 }
   
-

@@ -28,7 +28,19 @@ void LaserHarpFixture::resetPosition()
 void LaserHarpFixture::setup()
 {
    readCalibrationFromROM();
+   readSettingsFromROM();
    resetPosition();
+}
+
+void LaserHarpFixture::readSettingsFromROM()
+{
+    EEPROM.begin(512);
+    
+    dmxAddress = (int8_t)EEPROM.read(FIXTURE_SETTINGS_OFFSET);
+    Serial.print("Read Setting from ROM ");
+    Serial.println((int)dmxAddress);
+
+    EEPROM.end();
 }
 
 void LaserHarpFixture::readCalibrationFromROM()
@@ -60,6 +72,19 @@ void LaserHarpFixture::storeCalibration()
       Serial.print(" to address ");
       Serial.println(addr + i);
     }
+    EEPROM.commit();  
+    EEPROM.end();
+}
+
+void LaserHarpFixture::storeDmxAddress()
+{
+    EEPROM.begin(512);
+
+    EEPROM.write(FIXTURE_SETTINGS_OFFSET, (int8_t)dmxAddress);
+    Serial.print("Writing DMX Address into EEPROM");
+    Serial.print(" to address ");
+    Serial.println(FIXTURE_SETTINGS_OFFSET);
+    
     EEPROM.commit();  
     EEPROM.end();
 }
@@ -100,15 +125,22 @@ void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
    
    for(int i = 0; i < NB_BEAM; i++)
    {
-      newLaserValue = dmxFrame[DMX_ADDRESS - 1 + i*2];
+      newLaserValue = dmxFrame[getDmxAddress() - 1 + i*2];
       beamVector[i]->setPower(newLaserValue);
-      newLaserPosition= dmxFrame[DMX_ADDRESS + i*2];
+      newLaserPosition= dmxFrame[getDmxAddress() + i*2];
       beamVector[i]->setPosition(newLaserPosition);
    }
 }
 
 int LaserHarpFixture::getDmxAddress()
 {
-    return DMX_ADDRESS;  
+    return dmxAddress;  
 }
-  
+
+void LaserHarpFixture::setDmxAddress(short address)
+{
+    if(address >=0)
+    { 
+      dmxAddress = address;
+    }
+}  

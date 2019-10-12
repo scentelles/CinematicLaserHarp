@@ -13,6 +13,7 @@ class Fixture
   virtual void setPosition(int position);
   virtual void setInitPosition();
   virtual void setPower(int val); //overload in derived class to implement access to dimming/power
+
   
 };
 

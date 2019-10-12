@@ -15,7 +15,7 @@
 #include <Artnet.h>
 Artnet artnet;
 
-
+WiFiManager wifiManager;
 
 //I2C configuration
 const int sclPin = D1;
@@ -36,11 +36,14 @@ int  newButtonState = 0;
 int  buttonSameStateCount = 0;
 
 #define HMI_IDLE 0
+#define HMI_RESET_WIFI_SETTINGS 17
 #define HMI_SEQUENCE_IDLE 1
 #define HMI_SEQUENCE_ONGOING 2
 #define HMI_DMX_IDLE 3
 #define HMI_DMX_ONGOING 4
 #define HMI_SETTINGS_IDLE 5
+#define HMI_SETTINGS_EDIT 6
+#define HMI_SETTINGS_SAVING 16
 #define HMI_INFO 7
 #define HMI_LASERHARP_IDLE 8
 #define HMI_LASERHARP_ONGOING 9
@@ -52,6 +55,7 @@ int  buttonSameStateCount = 0;
 #define HMI_SETTINGS_CALIBRATION_SAVING 15
 
 int currentLHBeamEditing = 0;
+int currentSettingEditing = 0;
 int editValue = 0;
 int HMI_State = HMI_IDLE;
 
@@ -157,6 +161,10 @@ void setup() {
     lcd.print((char)LCD_CUSTOM_NOTE);
     lcd.print("Laser Harp");
     lcd.print((char)LCD_CUSTOM_NOTE);
+
+
+    // this will be called for each packet received
+    artnet.setArtDmxCallback(onDmxFrame);
     
     delay(2000);
 
@@ -202,7 +210,7 @@ void setup() {
   }
   //end read
 
-  WiFiManager wifiManager;
+
   wifiManager.setBreakAfterConfig(true);
   //reset saved settings
   //wifiManager.resetSettings();
@@ -335,6 +343,8 @@ String buttonToString(int buttonVal)
 
 void stateMachineStateAction(int state)
 {
+  // Serial.print("HMI STATE ACTION :");
+  // Serial.println(state);
    HMI_State = state;
    int newOffset;
    int tempIndex;
@@ -426,6 +436,15 @@ void stateMachineStateAction(int state)
          stateMachineStateAction(HMI_LASERHARP_IDLE);
        break; 
 
+       case HMI_DMX_ONGOING:
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("DMX STARTED"); 
+          lcd.setCursor(0, 1);
+          lcd.print("ADDRESS : ");
+          lcd.print(myLaserHarpFixture.getDmxAddress());
+       break;
+
        case HMI_SETTINGS_CALIBRATION_IDLE: 
          currentLHBeamEditing = 0;
          lcd.clear();
@@ -475,6 +494,8 @@ void stateMachineStateAction(int state)
 
 int stateMachineTransition(int buttonVal, int pressType)
 {
+ //  Serial.print("HMI TRANSITION :");
+ //  Serial.println(buttonVal);
    switch(HMI_State)
    {
        case HMI_IDLE:
@@ -492,16 +513,73 @@ int stateMachineTransition(int buttonVal, int pressType)
                break;
                 
                case BUTTON_SELECT:
-                  HMI_State = HMI_INFO;
-                  lcd.clear();
-                  lcd.setCursor(0, 0);
-                  lcd.print("Cinematic Laser Harp");                     
-                  lcd.setCursor(0, 1);
-                  lcd.print("v1.0"); 
+                  if(pressType == SHORT_PRESS)
+                  {
+                    HMI_State = HMI_INFO;
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("Cinematic Laser Harp");                     
+                    lcd.setCursor(0, 1);
+                    lcd.print("v1.0"); 
+                  }
+                  else
+                  {
+                    HMI_State = HMI_RESET_WIFI_SETTINGS;
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("LONG PRESS FOR");                     
+                    lcd.setCursor(0, 1);
+                    lcd.print("  WIFI RESET"); 
+                  }
+
+                  
                break; 
            }
        break;
+
+
+       case HMI_INFO:
+          //For all buttons, go back to Idle
+          stateMachineStateAction(HMI_IDLE);          
+       break;
        
+       case HMI_RESET_WIFI_SETTINGS:
+           switch(buttonVal)
+           {
+               case BUTTON_DOWN:
+               case BUTTON_UP:
+                  stateMachineStateAction(HMI_LASERHARP_IDLE); 
+               break; 
+               
+               
+               case BUTTON_SELECT:
+                  if(pressType == LONG_PRESS)
+                  {
+                    HMI_State = HMI_INFO;
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("WIFI RST STARTED");                     
+                    wifiManager.resetSettings();
+                    delay(2000);
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("WIFI RESET DONE");                       
+                  }
+                  else
+                  {
+                    HMI_State = HMI_RESET_WIFI_SETTINGS;
+                    lcd.clear();
+                    lcd.setCursor(0, 0);
+                    lcd.print("LONG PRESS FOR");                     
+                    lcd.setCursor(0, 1);
+                    lcd.print("  WIFI RESET"); 
+                    lcd.setCursor(0, 1);
+                    lcd.print("PLEASE REBOOT"); 
+                  }
+               break;            
+           }
+       break;
+              
        case HMI_LASERHARP_IDLE:
            switch(buttonVal)
            {
@@ -620,15 +698,8 @@ int stateMachineTransition(int buttonVal, int pressType)
                break; 
                
                case BUTTON_SELECT:
-                  HMI_State = HMI_DMX_ONGOING;
-                  lcd.clear();
-                  lcd.setCursor(0, 0);
-                  lcd.print("DMX STARTED"); 
-                  lcd.setCursor(0, 1);
-                  lcd.print("ADDRESS : ");
-                  lcd.print(myLaserHarpFixture.getDmxAddress());
-
                   artnet.begin();
+                  stateMachineStateAction(HMI_DMX_ONGOING);
                break; 
            }
        break;
@@ -637,22 +708,39 @@ int stateMachineTransition(int buttonVal, int pressType)
            switch(buttonVal)
            {
                case BUTTON_DOWN:
-                  HMI_State = HMI_SETTINGS_IDLE;
-                  lcd.clear();
-                  lcd.setCursor(0, 0);
-                  lcd.print("SETTINGS");  
-               break; 
-               
                case BUTTON_UP:
-                  //TODO : stop DMX
-                  stateMachineStateAction(HMI_SEQUENCE_IDLE);             
-               break; 
-               
-               case BUTTON_SELECT:
                   HMI_State = HMI_DMX_IDLE;
                   lcd.clear();
                   lcd.setCursor(0, 0);
-                  lcd.print("START DMX"); 
+                  lcd.print("START DMX");  
+               break; 
+
+               case BUTTON_RIGHT:
+                  myLaserHarpFixture.setDmxAddress(myLaserHarpFixture.getDmxAddress() + 1);
+                  stateMachineStateAction(HMI_DMX_ONGOING);
+               break; 
+
+               case BUTTON_LEFT:
+                  myLaserHarpFixture.setDmxAddress(myLaserHarpFixture.getDmxAddress() - 1);
+                  stateMachineStateAction(HMI_DMX_ONGOING);
+               break; 
+               
+               case BUTTON_SELECT:
+                  // if(pressType == LONG_PRESS)
+                  // {
+                      lcd.clear();
+                      lcd.setCursor(0, 0);
+                      lcd.print("STORING....");  
+                      myLaserHarpFixture.storeDmxAddress();
+                      
+                      lcd.clear();
+                      lcd.setCursor(0, 0);
+                      lcd.print("NEW DMX ADDRESS");  
+                      lcd.setCursor(0, 1);
+                      lcd.print("    STORED"); 
+                      delay(2000);
+                      stateMachineStateAction(HMI_DMX_ONGOING);                                              
+                  // }
                break; 
            }
        break;
@@ -673,10 +761,44 @@ int stateMachineTransition(int buttonVal, int pressType)
                break; 
                
                case BUTTON_SELECT:
-               
+                  HMI_State = HMI_SETTINGS_EDIT;
+                  lcd.clear();
+                  lcd.setCursor(0, 0);
+                  lcd.print("EDIT DMX SETTINGS");         
                break; 
            }
        break;
+
+       case HMI_SETTINGS_EDIT:
+           switch(buttonVal)
+           {
+               case BUTTON_DOWN:
+                  editValue = -1;
+                  stateMachineStateAction(HMI_SETTINGS_EDIT);    
+               break; 
+               
+               case BUTTON_UP:
+                  editValue = 1;
+                  stateMachineStateAction(HMI_SETTINGS_EDIT);                
+               break; 
+               
+               case BUTTON_LEFT:
+                  currentSettingEditing -= 1;
+                  stateMachineStateAction(HMI_SETTINGS_EDIT);                
+               break; 
+               
+               case BUTTON_RIGHT:
+                  currentSettingEditing += 1;
+                  stateMachineStateAction(HMI_SETTINGS_EDIT);                
+               break; 
+               
+               case BUTTON_SELECT:
+                  stateMachineStateAction(HMI_SETTINGS_SAVING);  
+  
+               break;          
+           }
+       break;
+
 
        case HMI_SETTINGS_CALIBRATION_IDLE:
            switch(buttonVal)
@@ -748,14 +870,25 @@ void displayLoop()
   }  
 }
 
+void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)
+{
+  
+     myLaserHarpFixture.applyDmxCommands(data);
+
+}
+
+
 void artNetLoop()
 {
+
+    artnet.read();
+  /*
    if (artnet.read() == ART_DMX)
    {
      //TODO : get Address from config
      uint8_t* dmxFrames = artnet.getDmxFrame();
      myLaserHarpFixture.applyDmxCommands(dmxFrames);
-  }
+  }*/
 }
 
 void ultrasonicLoop()
@@ -821,6 +954,29 @@ void loop() {
 
   if(HMI_State == HMI_DMX_ONGOING)
     artNetLoop();
+
+/*
+  if(Serial.available() > 0) // did something come in?
+  {
+    char tempC = Serial.read();
+    Serial.print("Received keypress : ");
+    Serial.println(tempC);
+    if(tempC == '4')
+      buttonPressRequest = BUTTON_LEFT;
+    if(tempC == '6')
+      buttonPressRequest = BUTTON_RIGHT;
+    if(tempC == '8')
+      buttonPressRequest = BUTTON_UP;
+    if(tempC == '2')
+      buttonPressRequest = BUTTON_DOWN;
+    if(tempC == '5')
+      buttonPressRequest = BUTTON_SELECT;
+
+    buttonPressRequestType = SHORT_PRESS;
+      
+  }*/
+
+
 
   //ultrasonicLoop();
   

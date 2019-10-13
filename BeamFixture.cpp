@@ -62,5 +62,36 @@ void BeamFixture::setPower(int val)
     //Serial.print(servoNum_);
     //Serial.print(" to value ");
     //Serial.println(val);
-    pwm_->setPWM(powerNum_, 0, 4096/256 * val);
+    if(!strobeForce)
+    {
+       pwm_->setPWM(powerNum_, 0, 4096/256 * val);
+    }
+    dimmerVal_ = val;
 }
+
+void BeamFixture::strobe()
+  {
+
+    if(strobeFreq_ == 0)
+      return;
+      
+    if(strobeCount_ < strobeFreq_ )
+    {
+      strobeCount_++;
+    }
+    else
+    {
+      strobeCount_ = 0;
+      if(strobeForce == false)
+      {
+        strobeForce = true;
+        pwm_->setPWM(powerNum_, 0, 0);
+      }
+      else
+      {
+        strobeForce = false;
+        pwm_->setPWM(powerNum_, 0, 4096/256 * dimmerVal_);
+      }
+      
+    }
+  }  

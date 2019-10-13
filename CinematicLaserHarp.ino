@@ -131,7 +131,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 }
 
 void setup() {
-    Serial.begin(115200);
+    //Serial.begin(115200);
        
     //Start I2C
     Wire.begin(sdaPin, sclPin);
@@ -882,13 +882,8 @@ void artNetLoop()
 {
 
     artnet.read();
-  /*
-   if (artnet.read() == ART_DMX)
-   {
-     //TODO : get Address from config
-     uint8_t* dmxFrames = artnet.getDmxFrame();
-     myLaserHarpFixture.applyDmxCommands(dmxFrames);
-  }*/
+    myLaserHarpFixture.strobe();
+
 }
 
 void ultrasonicLoop()

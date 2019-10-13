@@ -5,7 +5,10 @@ class Fixture
 {
   public:
   int position_ = 0;
-  bool statusOn_ = false;
+  int dimmerVal_ = 0;
+  int strobeFreq_ = 0;
+  int strobeCount_ = 0;
+  bool strobeForce = false;
   String name_;
     
   Fixture();
@@ -13,8 +16,8 @@ class Fixture
   virtual void setPosition(int position);
   virtual void setInitPosition();
   virtual void setPower(int val); //overload in derived class to implement access to dimming/power
-
-  
+  virtual void setStrobeFreq(int val);
+  virtual void strobe();  
 };
 
 #endif

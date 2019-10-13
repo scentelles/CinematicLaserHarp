@@ -25,6 +25,7 @@ class BeamFixture: public Fixture{
   void setPosition(int position);
   void setInitPosition();
   void setPower(int val);
+  void strobe();  
 };
 
 #endif

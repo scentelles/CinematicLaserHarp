@@ -106,6 +106,14 @@ void LaserHarpFixture::setBeamPosition(int beamId, int position)
     beamVector[beamId]->setPosition(position);
 }
 
+void LaserHarpFixture::strobe()
+{
+    for(int i =0; i < NB_BEAM; i++)
+    { 
+       beamVector[i]->strobe();
+    }
+}
+
 void LaserHarpFixture::powerAllBeams (bool on_off)
 {
     int powerValue = 0;
@@ -121,14 +129,16 @@ void LaserHarpFixture::powerAllBeams (bool on_off)
 
 void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
 {
-   int newLaserValue, newLaserPosition;
+   int newLaserValue, newLaserPosition, newStrobeFrequency;
    
    for(int i = 0; i < NB_BEAM; i++)
    {
-      newLaserValue = dmxFrame[getDmxAddress() - 1 + i*2];
+      newLaserValue = dmxFrame[getDmxAddress() - 1 + i*3];
       beamVector[i]->setPower(newLaserValue);
-      newLaserPosition= dmxFrame[getDmxAddress() + i*2];
+      newLaserPosition= dmxFrame[getDmxAddress() + i*3];
       beamVector[i]->setPosition(newLaserPosition);
+      newStrobeFrequency= dmxFrame[getDmxAddress() + i*3 + 1];
+      beamVector[i]->setStrobeFreq(newStrobeFrequency);
    }
 }
 

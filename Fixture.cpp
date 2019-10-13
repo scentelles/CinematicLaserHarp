@@ -19,7 +19,13 @@
   }
   void Fixture::setPower(int val)
   {
-    statusOn_ = val;  
+    dimmerVal_ = val;  
   }
-  
+  void Fixture::setStrobeFreq(int val)
+  {
+    strobeFreq_ = val;  
+  }  
+  void Fixture::strobe()
+  {
 
+  }  

@@ -34,6 +34,7 @@ class LaserHarpFixture
   void setLaserHarpInitPosition();
   void powerAllBeams (bool on_off);
   void applyDmxCommands(uint8_t* dmxFrame);
+  void strobe();
 
 
 };

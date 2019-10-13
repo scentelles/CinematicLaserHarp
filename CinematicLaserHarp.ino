@@ -710,6 +710,7 @@ int stateMachineTransition(int buttonVal, int pressType)
                case BUTTON_DOWN:
                case BUTTON_UP:
                   HMI_State = HMI_DMX_IDLE;
+                  artnet.stop();
                   lcd.clear();
                   lcd.setCursor(0, 0);
                   lcd.print("START DMX");  

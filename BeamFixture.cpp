@@ -25,8 +25,11 @@ void BeamFixture::setPosition(int value)
 
 
     //SERVO start @125PWM
-    //range :? using multiplier 1.5
-    int pulselen = SERVOMIN + value*1.5 + positionOffset_;
+    //using multiplier 1.5
+    //Usable range is between 80 and 220
+    //Mapping 0=>255 to 80=>220 : divide by 1.82
+    float mappedValue = 80 + (float)value / 1.82;
+    int pulselen = SERVOMIN + mappedValue*1.5 + positionOffset_;
 
     Serial.print("Moving servo ");
     Serial.print(servoNum_);

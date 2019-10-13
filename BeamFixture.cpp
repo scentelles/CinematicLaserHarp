@@ -76,7 +76,11 @@ void BeamFixture::strobe()
   {
 
     if(strobeFreq_ == 0)
+    {
+      strobeForce == false;
+      strobeCount_ = 0;
       return;
+    }
       
     if(strobeCount_ < strobeFreq_ )
     {

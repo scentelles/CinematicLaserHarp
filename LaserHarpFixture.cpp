@@ -13,6 +13,7 @@ LaserHarpFixture::LaserHarpFixture()
     beamVector.push_back(new BeamFixture("BEAM_4", &pwm_, 4, 12));
     beamVector.push_back(new BeamFixture("BEAM_5", &pwm_, 5, 13));
     beamVector.push_back(new BeamFixture("BEAM_6", &pwm_, 6, 14));
+    fogFixture = new BeamFixture("FOG", &pwm_, 7, 15);
 }
 
 
@@ -140,6 +141,13 @@ void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
       newStrobeFrequency= dmxFrame[getDmxAddress() + i*3 + 1];
       beamVector[i]->setStrobeFreq(newStrobeFrequency);
    }
+   //last address is the fog control
+   int fogOn = dmxFrame[getDmxAddress() + NB_BEAM*3 - 1]; 
+   if(fogOn > 1)
+     fogFixture->setPosition(150);
+   else
+     fogFixture->setPosition(50); 
+   
 }
 
 int LaserHarpFixture::getDmxAddress()

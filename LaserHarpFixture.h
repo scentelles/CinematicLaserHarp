@@ -17,6 +17,8 @@ class LaserHarpFixture
   public:
   Adafruit_PWMServoDriver pwm_ = Adafruit_PWMServoDriver(SERVO_BOARD_ADDRESS);
   std::vector<BeamFixture*> beamVector;
+  BeamFixture* fogFixture;
+  
   char dmxAddress = 0;
   
   public:

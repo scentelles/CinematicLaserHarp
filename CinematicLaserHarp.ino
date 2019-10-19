@@ -130,6 +130,14 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   
 }
 
+void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)
+{
+  
+     myLaserHarpFixture.applyDmxCommands(data);
+
+}
+
+
 void setup() {
     //Serial.begin(115200);
        
@@ -234,31 +242,47 @@ void setup() {
   lcd.print("CONNECTING...");  
   lcd.blink();
   if (!wifiManager.autoConnect("LASERHARP_CONFIG")) {
-    //Saving config in all cases
-    Serial.println("saving config");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& json = jsonBuffer.createObject();
-    Serial.print("New remote IP : ");
-    Serial.println(OSC_remoteaddress.getValue());
-    json["osc_remote_IP"] = OSC_remoteaddress.getValue();
-    File configFile = SPIFFS.open("/config.json", "w");
-    if (!configFile) {
-      Serial.println("failed to open config file for writing");
-    }
-
-    json.printTo(Serial);
-    json.printTo(configFile);
-    configFile.close();
-    //end save
-    
+    Serial.println("failed to connect and hit timeout");
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("RESTARTING...");
-    delay(2000);
-    ESP.restart();
+    lcd.print("CONNECT FAILED");  
 
+    delay(3000);
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(5000);
   }
+   //if you get here you have connected to the WiFi
+  Serial.println("connected...yeey :)");
 
+  //read updated parameters
+  strcpy(osc_remote_IP, OSC_remoteaddress.getValue());
+  
+    if (shouldSaveConfig) {    
+      Serial.println("saving config");
+      DynamicJsonBuffer jsonBuffer;
+      JsonObject& json = jsonBuffer.createObject();
+      Serial.print("New remote IP : ");
+      Serial.println(osc_remote_IP);
+      json["osc_remote_IP"] = osc_remote_IP;
+
+
+      File configFile = SPIFFS.open("/config.json", "w");
+      if (!configFile) {
+        Serial.println("failed to open config file for writing");
+      }
+  
+      json.printTo(Serial);
+      json.printTo(configFile);
+      configFile.close();
+    
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("NEW CONFIG SAVED");     
+      //end save
+    }
+    
+ 
   //if you get here you have connected to the WiFi
   Serial.println("CONNECTED!");
   Serial.println("local ip");
@@ -871,12 +895,6 @@ void displayLoop()
   }  
 }
 
-void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)
-{
-  
-     myLaserHarpFixture.applyDmxCommands(data);
-
-}
 
 
 void artNetLoop()

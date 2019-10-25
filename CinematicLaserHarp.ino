@@ -97,6 +97,10 @@ char osc_remote_IP[40];
 IPAddress * remoteIPAddressConfig;
 int localOSCPort = 8001;//used to receive program and control changes thru OSC 
 WiFiUDP LHUdp;
+#define OSC_PATH_START_LH   "/laserharp/startLH"
+#define OSC_PATH_START_DMX  "/laserharp/startDMX"
+#define OSC_PATH_START_IDLE "/laserharp/startIDLE"
+
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -386,6 +390,7 @@ void stateMachineStateAction(int state)
          lcd.setCursor(0, 1);    
          lcd.print( WiFi.localIP());  
          myLaserHarpFixture.resetPosition(); 
+         myLaserHarpFixture.powerAllBeams(false);
        break;
        
        case HMI_SEQUENCE_IDLE:
@@ -678,7 +683,6 @@ int stateMachineTransition(int buttonVal, int pressType)
            //todo : stop OSC
            if(buttonVal == BUTTON_RIGHT)
            {
-             myLaserHarpFixture.powerAllBeams(false);
              stateMachineStateAction(HMI_LASERHARP_IDLE);
            }  
        break;
@@ -920,6 +924,13 @@ void startDMXMode(OSCMessage &msg) {
   stateMachineStateAction(HMI_DMX_ONGOING);
 }
 
+void startIdleMode(OSCMessage &msg) {
+  Serial.print("received request to go to IDLE Mode");
+  artnet.stop();
+  stateMachineStateAction(HMI_IDLE);
+}
+
+
 void OSCReceiveLoop()
 {
  OSCMessage msg;
@@ -933,8 +944,9 @@ void OSCReceiveLoop()
     if (!msg.hasError()) {
       //todo: move OSC path to configuration
       Serial.println("dispatching OSC message");
-      msg.dispatch("/laserharp/startLH", startLaserHarp);
-      msg.dispatch("/laserharp/startDMX", startDMXMode);
+      msg.dispatch(OSC_PATH_START_LH, startLaserHarp);
+      msg.dispatch(OSC_PATH_START_DMX, startDMXMode);
+      msg.dispatch(OSC_PATH_START_IDLE, startIdleMode);
     } else {
       error = msg.getError();
       Serial.print("error: ");

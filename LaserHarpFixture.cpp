@@ -142,11 +142,11 @@ void LaserHarpFixture::applyDmxCommands(uint8_t* dmxFrame)
       beamVector[i]->setStrobeFreq(newStrobeFrequency);
    }
    //last address is the fog control
-   int fogOn = dmxFrame[getDmxAddress() + NB_BEAM*3 - 1]; 
-   if(fogOn > 1)
-     fogFixture->setPosition(150);
-   else
-     fogFixture->setPosition(50); 
+   int fogServoPos = dmxFrame[getDmxAddress() + NB_BEAM*3 - 1]; 
+   //if(fogOn > 1)
+     fogFixture->setPosition(fogServoPos);
+   //else
+   //  fogFixture->setPosition(50); 
    
 }
 

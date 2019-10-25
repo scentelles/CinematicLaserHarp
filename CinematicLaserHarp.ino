@@ -95,6 +95,8 @@ uint8_t retarrow[8] = { 0x1,0x1,0x5,0x9,0x1f,0x8,0x4};
 int ip[4];
 char osc_remote_IP[40];
 IPAddress * remoteIPAddressConfig;
+int localOSCPort = 8001;//used to receive program and control changes thru OSC 
+WiFiUDP LHUdp;
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -173,6 +175,9 @@ void setup() {
 
     // this will be called for each packet received
     artnet.setArtDmxCallback(onDmxFrame);
+
+    Serial.println("Starting UDP");
+    LHUdp.begin(localOSCPort);
     
     delay(2000);
 
@@ -408,13 +413,14 @@ void stateMachineStateAction(int state)
          lcd.print("SELECT LASERHARP");  
          lcd.setCursor(0, 1);
          lcd.print(myLaserKeyboard_p->getCurrentPreset());              
-       
-         myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset());  
+   
+//         myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset());  
        break;
           
        case HMI_LASERHARP_ONGOING: 
          lcd.clear();
-       
+         lcd.noBlink();
+         myLaserKeyboard_p->loadPreset(myLaserKeyboard_p->getCurrentPreset()); 
          myLaserHarpFixture.setLaserHarpInitPosition();
          myLaserHarpFixture.powerAllBeams(true);
        break;
@@ -895,7 +901,47 @@ void displayLoop()
   }  
 }
 
+void startLaserHarp(OSCMessage &msg) {
+  int tempProgram = msg.getInt(0);
+  
+  Serial.print("received request to start Laser Harp with preset : ");
+  Serial.println(tempProgram);
+  //Stop artnet in case we had started DMX mode previously
+  //Todo : find a cleaner way to do this
+  artnet.stop();
+  myLaserKeyboard_p->loadPreset(tempProgram); 
+  stateMachineStateAction(HMI_LASERHARP_ONGOING);
+}
+void startDMXMode(OSCMessage &msg) {
+  int tempProgram = msg.getInt(0);
+  Serial.print("received request to start DMX Mode : ");
+  Serial.println(tempProgram);
+  artnet.begin();
+  stateMachineStateAction(HMI_DMX_ONGOING);
+}
 
+void OSCReceiveLoop()
+{
+ OSCMessage msg;
+ OSCErrorCode error;
+  int size = LHUdp.parsePacket();
+  
+  if (size > 0) {
+    while (size--) {
+      msg.fill(LHUdp.read());
+    }
+    if (!msg.hasError()) {
+      //todo: move OSC path to configuration
+      Serial.println("dispatching OSC message");
+      msg.dispatch("/laserharp/startLH", startLaserHarp);
+      msg.dispatch("/laserharp/startDMX", startDMXMode);
+    } else {
+      error = msg.getError();
+      Serial.print("error: ");
+      Serial.println(error);
+    }
+  }  
+}
 
 void artNetLoop()
 {
@@ -959,6 +1005,8 @@ void buttonLoop()
 void loop() {
   displayLoop();
   buttonLoop();
+
+  OSCReceiveLoop();
   
   if(HMI_State == HMI_LASERHARP_ONGOING)
       myLaserKeyboard_p->loop();

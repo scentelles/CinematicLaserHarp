@@ -64,6 +64,7 @@ int HMI_State = HMI_IDLE;
 
 LaserKeyboard * myLaserKeyboard_p;
 LaserHarpFixture myLaserHarpFixture;
+int fogCount = 0;
 Sequencer  * mySequencer_p;
 Adafruit_MCP23017 mcp;
 
@@ -1021,7 +1022,18 @@ void loop() {
   OSCReceiveLoop();
   
   if(HMI_State == HMI_LASERHARP_ONGOING)
+  {
       myLaserKeyboard_p->loop();
+      fogCount += 1;
+      if (fogCount < 110)
+         myLaserHarpFixture.fogFixture->setPosition(80);
+      else
+         myLaserHarpFixture.fogFixture->setPosition(140);
+
+      if(fogCount>150)
+        fogCount = 0;
+      
+  }
 
   if(HMI_State == HMI_SEQUENCE_ONGOING)
       mySequencer_p->lightSequenceLoop();

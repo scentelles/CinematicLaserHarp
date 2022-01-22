@@ -41,6 +41,7 @@ class LaserKeyboard{
 
   public:
   LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDisplay, IPAddress* remoteIPAddress);
+  void initLaserKeyboardStatus();
   void setup();
   void buildMidiToNoteMap();
   String getNoteFromMidiNb(int midiValue);

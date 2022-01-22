@@ -104,6 +104,8 @@ void LaserHarpFixture::setLaserHarpInitPosition()
 
 void LaserHarpFixture::setBeamPosition(int beamId, int position)
 {
+    Serial.print("DEBUG set beam position : ");
+    Serial.println(beamId);
     beamVector[beamId]->setPosition(position);
 }
 

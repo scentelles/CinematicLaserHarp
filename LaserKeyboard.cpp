@@ -21,13 +21,10 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
   beamToPinMap[5] = 13;
   beamToPinMap[6] = 14;  
 
-  countSinceLastTriggerMap[0] = 0xFFFF;//init to max as we don't want to trigger at init
-  countSinceLastTriggerMap[1] = 0xFFFF;
-  countSinceLastTriggerMap[2] = 0xFFFF;
-  countSinceLastTriggerMap[3] = 0xFFFF;
-  countSinceLastTriggerMap[4] = 0xFFFF;
-  countSinceLastTriggerMap[5] = 0xFFFF;
-  countSinceLastTriggerMap[6] = 0xFFFF;
+
+  initLaserKeyboardStatus();
+
+
 
   myOSCManager_ = new OSCManager(remoteIPAddress, 8010, 8888);
   //not used.
@@ -35,6 +32,16 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
   mcp_ = mcp;
 }
 
+
+void LaserKeyboard::initLaserKeyboardStatus()
+{
+    for(int i = 0; i < NB_BEAM; i++)
+    {
+      countSinceLastTriggerMap[i] = 0xFFFF;//init to max as we don't want to trigger at init
+      beamStatusMap[i] = 0;
+    }
+
+}
 
 
 //todo : destructor
@@ -73,6 +80,8 @@ void LaserKeyboard::readAllPresetsFromROM()
         tempPreset[j] = tempC;
         Serial.print("Read from ROM : ");
         Serial.println((int)tempC);
+
+       
       }
       notePresets_.push_back(tempPreset);
       Serial.println("Added new preset from ROM");
@@ -221,6 +230,15 @@ void LaserKeyboard::process_beam_event(int beamId, bool value)
       lcd_->print((char)LCD_CUSTOM_NOTE);
       lcd_->print(getNoteFromMidiNb(currentNote));
       lcd_->print((char)LCD_CUSTOM_NOTE);
+
+      Serial.print(beamId);
+      Serial.print(" : ");
+      Serial.print(thisColumn);
+      Serial.print(" : ");
+      Serial.print(thisRow);
+      Serial.print(" : ");
+      Serial.println(getNoteFromMidiNb(currentNote));
+      
     }
   }
   else
@@ -245,6 +263,7 @@ void LaserKeyboard::loop()
   if(mcp_ != NULL)//read full register from IO expander once
   {
     tmpRegister  = mcp_->readGPIO(1); //read PORT B
+    Serial.println("reading from IO expander");
     Serial.println(tmpRegister, BIN);
   }
   for(int i = 0; i < NB_BEAM; i++)
@@ -252,11 +271,16 @@ void LaserKeyboard::loop()
     if(mcp_ != NULL) //read from IO expander register value
     {
       currentBeamStatus_ = (tmpRegister >> i) & 1;   
+
+      //simulate when not connected to IO expander, for debug
+    //  currentBeamStatus_ = (rand() > (RAND_MAX / 2))& 1;
       //Serial.println(currentBeamStatus_);
     }
     else //read directly from pins
     {
       currentBeamStatus_ = digitalRead(beamToPinMap[i]);
+
+
     }
 
     if(currentBeamStatus_)

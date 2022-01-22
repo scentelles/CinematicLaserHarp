@@ -29,7 +29,7 @@ LaserKeyboard::LaserKeyboard(Adafruit_MCP23017 * mcp, LiquidCrystal_I2C * lcdDis
   countSinceLastTriggerMap[5] = 0xFFFF;
   countSinceLastTriggerMap[6] = 0xFFFF;
 
-  myOSCManager_ = new OSCManager(remoteIPAddress, 8000, 8888);
+  myOSCManager_ = new OSCManager(remoteIPAddress, 8010, 8888);
   //not used.
   //myOSCManager_->setup();
   mcp_ = mcp;

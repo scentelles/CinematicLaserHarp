@@ -4,9 +4,9 @@
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
-#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h>  //https://github.com/fdebrabander/Arduino-LiquidCrystal-I2C-library.git
 
-#include "Adafruit_MCP23017.h"
+#include "Adafruit_MCP23017.h"  //https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library.git
 
 #include "sequencer.h"
 #include "LaserKeyboard.h"
@@ -14,6 +14,8 @@
 
 #include <Artnet.h>
 Artnet artnet;
+
+bool artnetStopped = true;
 
 WiFiManager wifiManager;
 
@@ -97,7 +99,9 @@ int ip[4];
 char osc_remote_IP[40];
 IPAddress * remoteIPAddressConfig;
 int localOSCPort = 8001;//used to receive program and control changes thru OSC 
+int remoteOSCPort = 8010;//used to send debug message thru OSC 
 WiFiUDP LHUdp;
+
 #define OSC_PATH_START_LH   "/laserharp/startLH"
 #define OSC_PATH_START_DMX  "/laserharp/startDMX"
 #define OSC_PATH_START_IDLE "/laserharp/startIDLE"
@@ -146,7 +150,7 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
 
 
 void setup() {
-    //Serial.begin(115200);
+    Serial.begin(115200);
        
     //Start I2C
     Wire.begin(sdaPin, sclPin);
@@ -232,8 +236,9 @@ void setup() {
   wifiManager.setBreakAfterConfig(true);
   //reset saved settings
   //wifiManager.resetSettings();
-  
-  WiFiManagerParameter OSC_remoteaddress("OSC_IP", "OSC remote address", osc_remote_IP, 40);
+  //force address as storage does not seem to work... TODO : fix this!
+
+  WiFiManagerParameter OSC_remoteaddress("OSC_IP", "OSC remote address", "10.3.141.3", 40);
   wifiManager.addParameter(&OSC_remoteaddress);
   
   //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
@@ -329,6 +334,16 @@ void setup() {
 }
 
 
+//Debug purpose
+void sendDebugMsg(int message)
+{
+    OSCMessage msg("/laserharp/debug");
+    msg.add(message);
+    LHUdp.beginPacket(osc_remote_IP, remoteOSCPort);
+    msg.send(LHUdp);
+    LHUdp.endPacket();
+   // LHUdp.empty();
+}
 
 //========================================================
 //Menu state machine
@@ -338,21 +353,26 @@ byte getPressedButton() {
 
   /* Lit l'état des boutons */
   int value = analogRead(A0);
+
+  if (value !=1024)
+  {
+    sendDebugMsg(value);
+  }
  //Serial.println(value);
   /* Calcul l'état des boutons */
-  if (value < 50)
+  if (value < 200)
     return BUTTON_RIGHT;
-  else if (value < 380){
+  else if (value < 410){
     Serial.print("Analog value");
     Serial.println(value);
     return BUTTON_UP;}
-  else if (value < 500){
+  else if (value < 550){
     Serial.print("Analog value");
     Serial.println(value);
     return BUTTON_DOWN;}
-  else if (value < 700)
+  else if (value < 800)
     return BUTTON_LEFT;
-  else if (value < 950)
+  else if (value < 940)
     return BUTTON_SELECT;
   else
     return BUTTON_NONE;
@@ -734,6 +754,7 @@ int stateMachineTransition(int buttonVal, int pressType)
                
                case BUTTON_SELECT:
                   artnet.begin();
+                  artnetStopped = false;
                   stateMachineStateAction(HMI_DMX_ONGOING);
                break; 
            }
@@ -745,7 +766,8 @@ int stateMachineTransition(int buttonVal, int pressType)
                case BUTTON_DOWN:
                case BUTTON_UP:
                   HMI_State = HMI_DMX_IDLE;
-                  artnet.stop();
+                  //artnet.stop();
+                  artnetStopped = true;
                   lcd.clear();
                   lcd.setCursor(0, 0);
                   lcd.print("START DMX");  
@@ -913,7 +935,8 @@ void startLaserHarp(OSCMessage &msg) {
   Serial.println(tempProgram);
   //Stop artnet in case we had started DMX mode previously
   //Todo : find a cleaner way to do this
-  artnet.stop();
+  //artnet.stop();
+  artnetStopped = true;
   myLaserKeyboard_p->loadPreset(tempProgram); 
   stateMachineStateAction(HMI_LASERHARP_ONGOING);
 }
@@ -922,12 +945,14 @@ void startDMXMode(OSCMessage &msg) {
   Serial.print("received request to start DMX Mode : ");
   Serial.println(tempProgram);
   artnet.begin();
+  artnetStopped = false;
   stateMachineStateAction(HMI_DMX_ONGOING);
 }
 
 void startIdleMode(OSCMessage &msg) {
   Serial.print("received request to go to IDLE Mode");
-  artnet.stop();
+  //artnet.stop();
+  artnetStopped = true;
   stateMachineStateAction(HMI_IDLE);
 }
 
@@ -958,9 +983,16 @@ void OSCReceiveLoop()
 
 void artNetLoop()
 {
-
-    artnet.read();
-    myLaserHarpFixture.strobe();
+    if(!artnetStopped)
+    {
+      artnet.read();
+      myLaserHarpFixture.strobe();
+    }
+    else
+    {
+       delay (100); 
+     }
+    
 
 }
 

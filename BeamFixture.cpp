@@ -69,6 +69,7 @@ void BeamFixture::setPower(int val)
     {
        pwm_->setPWM(powerNum_, 0, 4096/256 * val);
     }
+
     dimmerVal_ = val;
 }
 
@@ -77,7 +78,7 @@ void BeamFixture::strobe()
 
     if(strobeFreq_ == 0)
     {
-      strobeForce == false;
+      strobeForce = false;
       strobeCount_ = 0;
       return;
     }
@@ -99,6 +100,5 @@ void BeamFixture::strobe()
         strobeForce = false;
         pwm_->setPWM(powerNum_, 0, 4096/256 * dimmerVal_);
       }
-      
     }
   }  

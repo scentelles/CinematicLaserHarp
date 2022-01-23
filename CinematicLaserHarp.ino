@@ -56,6 +56,8 @@ int  buttonSameStateCount = 0;
 #define HMI_SETTINGS_CALIBRATION_EDIT 14
 #define HMI_SETTINGS_CALIBRATION_SAVING 15
 
+#define LH_ARTNET_UNIVERSE 0 //TODO : could be configurable from HMI
+
 int currentLHBeamEditing = 0;
 int currentSettingEditing = 0;
 int editValue = 0;
@@ -151,8 +153,12 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)
 {
-  
-     myLaserHarpFixture.applyDmxCommands(data);
+     //Serial.print("ARTNET Universe#");
+     //Serial.println(universe);
+     if(universe == LH_ARTNET_UNIVERSE)
+     {
+       myLaserHarpFixture.applyDmxCommands(data);
+     }
 
 }
 

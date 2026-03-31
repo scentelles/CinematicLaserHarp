@@ -162,7 +162,6 @@ class MidiBridge:
             return True
         self.running = True
         dispatcher = Dispatcher()
-        dispatcher.map("/vkb_midi/0/note/*", self._handle_osc_note)
         dispatcher.set_default_handler(self._handle_any_osc)
         try:
             self.osc_server = BlockingOSCUDPServer(("0.0.0.0", OSC_LISTEN_PORT), dispatcher)

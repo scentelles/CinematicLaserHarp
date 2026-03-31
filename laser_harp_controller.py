@@ -241,6 +241,7 @@ class LaserHarpController:
         self.target_entries = []
         self.monitor_text = None  # will be set if monitor window is open
         self._osc_msg_count = 0
+        self._hide_debug = tk.BooleanVar(value=False)
 
         self._build_ui()
         self._center_window()
@@ -349,6 +350,9 @@ class LaserHarpController:
 
     def _on_any_osc(self, address, args):
         """Called from OSC thread for every incoming message."""
+        # Filter debug messages if option is enabled
+        if self._hide_debug.get() and "/debug" in address:
+            return
         self._osc_msg_count += 1
         ts = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
         args_str = "  ".join(str(a) for a in args) if args else ""
@@ -386,6 +390,12 @@ class LaserHarpController:
         clear_btn.pack(side="right")
         clear_btn.bind("<Enter>", lambda e: clear_btn.configure(bg=ACCENT_RED, fg="black"))
         clear_btn.bind("<Leave>", lambda e: clear_btn.configure(bg=BG_PANEL, fg=ACCENT_RED))
+
+        debug_cb = tk.Checkbutton(hdr, text="Hide debug", variable=self._hide_debug,
+                                  font=("Consolas", 8), fg=ACCENT_DIM,
+                                  bg=BG_DARK, selectcolor=BG_PANEL,
+                                  activebackground=BG_DARK, activeforeground=FG_TEXT)
+        debug_cb.pack(side="right", padx=(0, 10))
 
         # Scrollable text area
         text_frame = tk.Frame(mw, bg=BG_DARK, padx=10, pady=10)

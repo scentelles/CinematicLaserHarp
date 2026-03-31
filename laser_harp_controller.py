@@ -39,7 +39,7 @@ BTN_SELECT = 5
 LONG_PRESS_OFFSET = BTN_SELECT
 
 NB_BEAM = 7
-DEFAULT_NOTES = [36, 48, 60, 62, 64, 65, 67]
+DEFAULT_NOTES = [50, 53, 55, 57, 59, 60, 62]
 
 # ─── MIDI Helpers ─────────────────────────────────────────────────────────
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]

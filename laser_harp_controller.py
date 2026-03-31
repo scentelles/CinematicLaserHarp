@@ -13,6 +13,7 @@ Usage:
 import tkinter as tk
 from tkinter import ttk
 import time
+import datetime
 import threading
 import re
 import mido
@@ -117,7 +118,7 @@ HELP_TEXT = """\
 class MidiBridge:
     """OSC listener + MIDI note remapping + MIDI output."""
 
-    def __init__(self, on_note_callback=None):
+    def __init__(self, on_note_callback=None, on_any_osc_callback=None):
         self.note_map = {}
         for n in DEFAULT_NOTES:
             self.note_map[n] = n
@@ -128,6 +129,7 @@ class MidiBridge:
         self.osc_thread = None
         self.running = False
         self.on_note_callback = on_note_callback
+        self.on_any_osc_callback = on_any_osc_callback
 
     def set_target_note(self, beam_index, target_midi):
         self.note_map[DEFAULT_NOTES[beam_index]] = target_midi
@@ -161,6 +163,7 @@ class MidiBridge:
         self.running = True
         dispatcher = Dispatcher()
         dispatcher.map("/vkb_midi/0/note/*", self._handle_osc_note)
+        dispatcher.set_default_handler(self._handle_any_osc)
         try:
             self.osc_server = BlockingOSCUDPServer(("0.0.0.0", OSC_LISTEN_PORT), dispatcher)
         except OSError:
@@ -203,6 +206,14 @@ class MidiBridge:
         if self.on_note_callback and beam_index is not None:
             self.on_note_callback(beam_index, velocity)
 
+    def _handle_any_osc(self, address, *args):
+        """Catch-all: forward every OSC message to the monitor callback."""
+        if self.on_any_osc_callback:
+            self.on_any_osc_callback(address, args)
+        # Also route note messages to the note handler
+        if address.startswith("/vkb_midi/0/note/"):
+            self._handle_osc_note(address, *args)
+
     @staticmethod
     def get_midi_ports():
         try:
@@ -222,9 +233,14 @@ class LaserHarpController:
         self.status_var = tk.StringVar(value="Not connected")
         self._select_press_time = 0
 
-        self.bridge = MidiBridge(on_note_callback=self._on_bridge_note)
+        self.bridge = MidiBridge(
+            on_note_callback=self._on_bridge_note,
+            on_any_osc_callback=self._on_any_osc
+        )
         self.beam_indicators = []
         self.target_entries = []
+        self.monitor_text = None  # will be set if monitor window is open
+        self._osc_msg_count = 0
 
         self._build_ui()
         self._center_window()
@@ -329,6 +345,80 @@ class LaserHarpController:
             entry.configure(fg=ACCENT_RED)
             self._set_status(f"⚠ Invalid note: {text}", ACCENT_RED)
 
+    # ─── OSC Monitor ──────────────────────────────────────────────────
+
+    def _on_any_osc(self, address, args):
+        """Called from OSC thread for every incoming message."""
+        self._osc_msg_count += 1
+        ts = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        args_str = "  ".join(str(a) for a in args) if args else ""
+        line = f"[{ts}]  {address}  {args_str}\n"
+        self.root.after(0, self._append_monitor_line, line)
+
+    def _append_monitor_line(self, line):
+        if self.monitor_text and self.monitor_text.winfo_exists():
+            self.monitor_text.configure(state="normal")
+            self.monitor_text.insert("end", line)
+            # Keep max 500 lines
+            line_count = int(self.monitor_text.index("end-1c").split(".")[0])
+            if line_count > 500:
+                self.monitor_text.delete("1.0", "2.0")
+            self.monitor_text.see("end")
+            self.monitor_text.configure(state="disabled")
+
+    def _show_monitor(self):
+        mw = tk.Toplevel(self.root)
+        mw.title("📡 OSC Monitor")
+        mw.configure(bg=BG_DARK)
+        mw.geometry("560x400")
+
+        # Header
+        hdr = tk.Frame(mw, bg=BG_DARK, padx=10, pady=6)
+        hdr.pack(fill="x")
+        tk.Label(hdr, text="📡 OSC INCOMING (port 8010)",
+                 font=("Consolas", 11, "bold"), fg=ACCENT_CYAN,
+                 bg=BG_DARK).pack(side="left")
+
+        clear_btn = tk.Button(hdr, text="Clear", font=("Consolas", 9, "bold"),
+                              fg=ACCENT_RED, bg=BG_PANEL, borderwidth=0,
+                              cursor="hand2",
+                              command=lambda: self._clear_monitor())
+        clear_btn.pack(side="right")
+        clear_btn.bind("<Enter>", lambda e: clear_btn.configure(bg=ACCENT_RED, fg="black"))
+        clear_btn.bind("<Leave>", lambda e: clear_btn.configure(bg=BG_PANEL, fg=ACCENT_RED))
+
+        # Scrollable text area
+        text_frame = tk.Frame(mw, bg=BG_DARK, padx=10, pady=10)
+        text_frame.pack(fill="both", expand=True)
+
+        scrollbar = tk.Scrollbar(text_frame)
+        scrollbar.pack(side="right", fill="y")
+
+        self.monitor_text = tk.Text(text_frame, font=("Consolas", 8),
+                                    fg=ACCENT_GREEN, bg="#0a0a14",
+                                    borderwidth=1, relief="solid",
+                                    wrap="none", cursor="arrow",
+                                    yscrollcommand=scrollbar.set)
+        self.monitor_text.pack(fill="both", expand=True)
+        self.monitor_text.configure(state="disabled")
+        scrollbar.configure(command=self.monitor_text.yview)
+
+        mw.transient(self.root)
+        x = self.root.winfo_x() + self.root.winfo_width() + 10
+        y = self.root.winfo_y()
+        mw.geometry(f"+{x}+{y}")
+
+        def on_close():
+            self.monitor_text = None
+            mw.destroy()
+        mw.protocol("WM_DELETE_WINDOW", on_close)
+
+    def _clear_monitor(self):
+        if self.monitor_text and self.monitor_text.winfo_exists():
+            self.monitor_text.configure(state="normal")
+            self.monitor_text.delete("1.0", "end")
+            self.monitor_text.configure(state="disabled")
+
     # ─── Help Window ──────────────────────────────────────────────────
 
     def _show_help(self):
@@ -383,6 +473,13 @@ class LaserHarpController:
         help_btn.pack(side="right")
         help_btn.bind("<Enter>", lambda e: help_btn.configure(bg=ACCENT_ORANGE, fg="black"))
         help_btn.bind("<Leave>", lambda e: help_btn.configure(bg=BG_PANEL, fg=ACCENT_ORANGE))
+
+        mon_btn = tk.Button(title_row, text=" 📡 ", font=("Consolas", 12, "bold"),
+                            fg=ACCENT_GREEN, bg=BG_PANEL, borderwidth=0,
+                            cursor="hand2", command=self._show_monitor)
+        mon_btn.pack(side="right", padx=(0, 4))
+        mon_btn.bind("<Enter>", lambda e: mon_btn.configure(bg=ACCENT_GREEN, fg="black"))
+        mon_btn.bind("<Leave>", lambda e: mon_btn.configure(bg=BG_PANEL, fg=ACCENT_GREEN))
 
         # ── IP Config ──
         ip_frame = tk.Frame(outer, bg=BG_PANEL, padx=12, pady=6,

@@ -16,6 +16,8 @@ import time
 import datetime
 import threading
 import re
+import json
+import os
 import mido
 from pythonosc.udp_client import SimpleUDPClient
 from pythonosc.osc_server import BlockingOSCUDPServer
@@ -24,6 +26,8 @@ from pythonosc.dispatcher import Dispatcher
 # ─── OSC Protocol Constants (matching CinematicLaserHarp.ino) ─────────────
 OSC_SEND_PORT = 8001
 OSC_LISTEN_PORT = 8010
+DEFAULT_ESP_IP = "10.3.141.240"
+PRESETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chord_presets.json")
 
 OSC_PATH_START_LH = "/laserharp/startLH"
 OSC_PATH_START_DMX = "/laserharp/startDMX"
@@ -39,6 +43,7 @@ BTN_SELECT = 5
 LONG_PRESS_OFFSET = BTN_SELECT
 
 NB_BEAM = 7
+NOTES_PER_BEAM = 3
 DEFAULT_NOTES = [50, 53, 55, 57, 59, 60, 62]
 
 # ─── MIDI Helpers ─────────────────────────────────────────────────────────
@@ -119,9 +124,10 @@ class MidiBridge:
     """OSC listener + MIDI note remapping + MIDI output."""
 
     def __init__(self, on_note_callback=None, on_any_osc_callback=None):
+        # note_map: {default_midi: [note1, note2, note3]}  — None means unused slot
         self.note_map = {}
         for n in DEFAULT_NOTES:
-            self.note_map[n] = n
+            self.note_map[n] = [n, None, None]
 
         self.midi_port = None
         self.midi_port_name = None
@@ -131,10 +137,12 @@ class MidiBridge:
         self.on_note_callback = on_note_callback
         self.on_any_osc_callback = on_any_osc_callback
 
-    def set_target_note(self, beam_index, target_midi):
-        self.note_map[DEFAULT_NOTES[beam_index]] = target_midi
+    def set_target_note(self, beam_index, slot, target_midi):
+        """Set note for beam at slot (0, 1, or 2). None clears the slot."""
+        self.note_map[DEFAULT_NOTES[beam_index]][slot] = target_midi
 
-    def get_target_note(self, beam_index):
+    def get_target_notes(self, beam_index):
+        """Returns list of [note1, note2, note3] (None for empty slots)."""
         return self.note_map[DEFAULT_NOTES[beam_index]]
 
     def open_midi_port(self, port_name):
@@ -190,15 +198,19 @@ class MidiBridge:
         if note_num in DEFAULT_NOTES:
             beam_index = DEFAULT_NOTES.index(note_num)
 
-        target_note = self.note_map.get(note_num, note_num)
+        # Get all notes for this beam (chord)
+        target_notes = self.note_map.get(note_num, [note_num, None, None])
 
         if self.midi_port:
             try:
-                if velocity > 0:
-                    msg = mido.Message('note_on', note=target_note, velocity=velocity, channel=0)
-                else:
-                    msg = mido.Message('note_off', note=target_note, velocity=0, channel=0)
-                self.midi_port.send(msg)
+                for tn in target_notes:
+                    if tn is None:
+                        continue
+                    if velocity > 0:
+                        msg = mido.Message('note_on', note=tn, velocity=velocity, channel=0)
+                    else:
+                        msg = mido.Message('note_off', note=tn, velocity=0, channel=0)
+                    self.midi_port.send(msg)
             except Exception:
                 pass
 
@@ -307,10 +319,11 @@ class LaserHarpController:
                 bg=BG_PANEL, fg=ACCENT_DIM, text="○"))
         else:
             indicator.configure(bg=BG_PANEL, fg=ACCENT_DIM, text="○")
-        target = self.bridge.get_target_note(beam_index)
+        targets = self.bridge.get_target_notes(beam_index)
+        chord_str = " + ".join(midi_to_name(n) for n in targets if n is not None)
         self._set_status(
             f"♪ Beam {beam_index}: {midi_to_name(DEFAULT_NOTES[beam_index])} → "
-            f"{midi_to_name(target)} vel={velocity}", ACCENT_GREEN)
+            f"{chord_str} vel={velocity}", ACCENT_GREEN)
 
     def _on_midi_port_selected(self, event=None):
         port_name = self.midi_combo.get()
@@ -327,9 +340,15 @@ class LaserHarpController:
         if ports:
             self.midi_combo.set(ports[0])
 
-    def _apply_note_mapping(self, beam_index):
-        entry = self.target_entries[beam_index]
+    def _apply_note_mapping(self, beam_index, slot):
+        entry = self.target_entries[beam_index][slot]
         text = entry.get().strip()
+        if text == "":
+            # Empty = clear this slot
+            self.bridge.set_target_note(beam_index, slot, None)
+            entry.configure(fg=ACCENT_DIM)
+            self._set_status(f"✓ Beam {beam_index} slot {slot+1}: cleared", ACCENT_GREEN)
+            return
         midi_val = name_to_midi(text)
         if midi_val < 0:
             try:
@@ -337,13 +356,96 @@ class LaserHarpController:
             except ValueError:
                 midi_val = -1
         if 0 <= midi_val <= 127:
-            self.bridge.set_target_note(beam_index, midi_val)
-            entry.configure(fg=ACCENT_GREEN)
+            self.bridge.set_target_note(beam_index, slot, midi_val)
+            entry.configure(fg=ACCENT_YELLOW if slot == 0 else ACCENT_GREEN)
             self._set_status(
-                f"✓ Beam {beam_index}: → {midi_to_name(midi_val)}", ACCENT_GREEN)
+                f"✓ Beam {beam_index} slot {slot+1}: {midi_to_name(midi_val)}", ACCENT_GREEN)
         else:
             entry.configure(fg=ACCENT_RED)
             self._set_status(f"⚠ Invalid note: {text}", ACCENT_RED)
+
+    # ─── Chord Preset Management ──────────────────────────────────────
+
+    def _get_all_presets(self):
+        """Load all presets from JSON file."""
+        if os.path.exists(PRESETS_FILE):
+            try:
+                with open(PRESETS_FILE, "r") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {}
+
+    def _save_all_presets(self, presets):
+        """Save all presets to JSON file."""
+        with open(PRESETS_FILE, "w") as f:
+            json.dump(presets, f, indent=2)
+
+    def _refresh_chord_presets(self):
+        presets = self._get_all_presets()
+        self.chord_preset_combo["values"] = list(presets.keys())
+
+    def _save_chord_preset(self):
+        name = self.chord_preset_combo.get().strip()
+        if not name:
+            self._set_status("⚠ Enter a preset name first", ACCENT_RED)
+            return
+        # Build preset data from current entries
+        data = []
+        for i in range(NB_BEAM):
+            beam_notes = []
+            for slot in range(NOTES_PER_BEAM):
+                text = self.target_entries[i][slot].get().strip()
+                if text:
+                    midi_val = name_to_midi(text)
+                    if midi_val < 0:
+                        try:
+                            midi_val = int(text)
+                        except ValueError:
+                            midi_val = -1
+                    beam_notes.append(midi_val if 0 <= midi_val <= 127 else None)
+                else:
+                    beam_notes.append(None)
+            data.append(beam_notes)
+        presets = self._get_all_presets()
+        presets[name] = data
+        self._save_all_presets(presets)
+        self._refresh_chord_presets()
+        self._set_status(f"✓ Preset '{name}' saved", ACCENT_GREEN)
+
+    def _load_chord_preset(self, event=None):
+        name = self.chord_preset_combo.get().strip()
+        presets = self._get_all_presets()
+        if name not in presets:
+            self._set_status(f"⚠ Preset '{name}' not found", ACCENT_RED)
+            return
+        data = presets[name]
+        for i in range(min(NB_BEAM, len(data))):
+            beam_notes = data[i]
+            for slot in range(min(NOTES_PER_BEAM, len(beam_notes))):
+                entry = self.target_entries[i][slot]
+                entry.delete(0, "end")
+                val = beam_notes[slot]
+                if val is not None and 0 <= val <= 127:
+                    entry.insert(0, midi_to_name(val))
+                    entry.configure(fg=ACCENT_YELLOW if slot == 0 else ACCENT_GREEN)
+                    self.bridge.set_target_note(i, slot, val)
+                else:
+                    entry.configure(fg=ACCENT_DIM)
+                    self.bridge.set_target_note(i, slot, None)
+        self._set_status(f"✓ Preset '{name}' loaded", ACCENT_GREEN)
+
+    def _delete_chord_preset(self):
+        name = self.chord_preset_combo.get().strip()
+        if not name:
+            return
+        presets = self._get_all_presets()
+        if name in presets:
+            del presets[name]
+            self._save_all_presets(presets)
+            self._refresh_chord_presets()
+            self.chord_preset_combo.set("")
+            self._set_status(f"✓ Preset '{name}' deleted", ACCENT_RED)
 
     # ─── OSC Monitor ──────────────────────────────────────────────────
 
@@ -500,7 +602,7 @@ class LaserHarpController:
         self.ip_entry = tk.Entry(ip_frame, font=("Consolas", 12), width=16,
                                  bg=BG_DARK, fg=ACCENT_CYAN, insertbackground=ACCENT_CYAN,
                                  borderwidth=1, relief="solid")
-        self.ip_entry.insert(0, "192.168.1.100")
+        self.ip_entry.insert(0, DEFAULT_ESP_IP)
         self.ip_entry.pack(side="left", padx=(8, 0))
 
         # ══════════════════════════════════════════════════════════════
@@ -526,14 +628,6 @@ class LaserHarpController:
                                    borderwidth=1, relief="groove")
         mode_frame.pack(fill="x", pady=(0, 8))
 
-        preset_row = tk.Frame(mode_frame, bg=BG_DARK)
-        preset_row.pack(pady=(0, 8))
-        tk.Label(preset_row, text="Preset:", font=("Consolas", 9),
-                 fg=FG_TEXT, bg=BG_DARK).pack(side="left")
-        self.preset_spin = tk.Spinbox(preset_row, from_=0, to=30, width=4,
-                                       font=("Consolas", 11), bg=BG_DARK, fg=ACCENT_CYAN,
-                                       buttonbackground=BG_PANEL, borderwidth=1, relief="solid")
-        self.preset_spin.pack(side="left", padx=(6, 0))
 
         btn_row = tk.Frame(mode_frame, bg=BG_DARK)
         btn_row.pack(fill="x")
@@ -542,7 +636,7 @@ class LaserHarpController:
 
         mode_defs = [
             ("🎵 HARP", ACCENT_CYAN, GLOW_CYAN,
-             lambda: self._send_osc(OSC_PATH_START_LH, int(self.preset_spin.get()))),
+             lambda: self._send_osc(OSC_PATH_START_LH, 0)),
             ("💡 DMX", ACCENT_MAGENTA, GLOW_MAGENTA,
              lambda: self._send_osc(OSC_PATH_START_DMX, 0)),
             ("⏹ IDLE", ACCENT_ORANGE, BG_PANEL,
@@ -624,69 +718,92 @@ class LaserHarpController:
         refresh_btn.bind("<Enter>", lambda e: refresh_btn.configure(bg=ACCENT_CYAN, fg="black"))
         refresh_btn.bind("<Leave>", lambda e: refresh_btn.configure(bg=BG_PANEL, fg=ACCENT_CYAN))
 
-        # Column headers
+        # Column headers:  [indicator] [beam] [from] [→] [note1] [note2] [note3]
         header = tk.Frame(midi_frame, bg=BG_DARK)
         header.pack(fill="x", pady=(4, 2))
-        header.columnconfigure(0, minsize=28)
-        header.columnconfigure(1, weight=1)
-        header.columnconfigure(2, minsize=50)
-        header.columnconfigure(3, minsize=24)
-        header.columnconfigure(4, minsize=50)
-
-        tk.Label(header, text="", width=3, bg=BG_DARK).grid(row=0, column=0)
-        tk.Label(header, text="Beam", font=("Consolas", 8, "bold"),
-                 fg=ACCENT_DIM, bg=BG_DARK, anchor="w").grid(row=0, column=1, sticky="w")
-        tk.Label(header, text="From", font=("Consolas", 8, "bold"),
-                 fg=ACCENT_DIM, bg=BG_DARK).grid(row=0, column=2)
-        tk.Label(header, text="→", font=("Consolas", 8),
-                 fg=ACCENT_DIM, bg=BG_DARK).grid(row=0, column=3)
-        tk.Label(header, text="To", font=("Consolas", 8, "bold"),
-                 fg=ACCENT_DIM, bg=BG_DARK).grid(row=0, column=4)
+        for c, (txt, w) in enumerate([
+            ("", 28), ("Beam", 0), ("From", 44), ("→", 16),
+            ("Note 1", 44), ("Note 2", 44), ("Note 3", 44)
+        ]):
+            header.columnconfigure(c, minsize=w, weight=(1 if c == 1 else 0))
+            if txt:
+                tk.Label(header, text=txt, font=("Consolas", 7, "bold"),
+                         fg=ACCENT_DIM, bg=BG_DARK).grid(row=0, column=c)
 
         # Beam mapping rows
         self.beam_indicators = []
-        self.target_entries = []
+        self.target_entries = []  # list of [entry1, entry2, entry3] per beam
 
         for i in range(NB_BEAM):
             row_f = tk.Frame(midi_frame, bg=BG_DARK)
-            row_f.pack(fill="x", pady=2)
-            row_f.columnconfigure(0, minsize=28)
-            row_f.columnconfigure(1, weight=1)
-            row_f.columnconfigure(2, minsize=50)
-            row_f.columnconfigure(3, minsize=24)
-            row_f.columnconfigure(4, minsize=50)
+            row_f.pack(fill="x", pady=1)
+            for c, w in enumerate([28, 0, 44, 16, 44, 44, 44]):
+                row_f.columnconfigure(c, minsize=w, weight=(1 if c == 1 else 0))
 
             # Activity indicator
-            ind = tk.Label(row_f, text="○", font=("Consolas", 10),
+            ind = tk.Label(row_f, text="○", font=("Consolas", 9),
                            fg=ACCENT_DIM, bg=BG_PANEL, width=3)
-            ind.grid(row=0, column=0, padx=(0, 4))
+            ind.grid(row=0, column=0, padx=(0, 2))
             self.beam_indicators.append(ind)
 
             # Beam label
-            tk.Label(row_f, text=f"Beam {i}", font=("Consolas", 9),
+            tk.Label(row_f, text=f"B{i}", font=("Consolas", 8),
                      fg=FG_TEXT, bg=BG_DARK, anchor="w").grid(row=0, column=1, sticky="w")
 
             # Source note
             tk.Label(row_f, text=midi_to_name(DEFAULT_NOTES[i]),
-                     font=("Consolas", 10, "bold"),
-                     fg=ACCENT_CYAN, bg=BG_PANEL, width=5).grid(row=0, column=2, padx=2)
+                     font=("Consolas", 9, "bold"),
+                     fg=ACCENT_CYAN, bg=BG_PANEL, width=4).grid(row=0, column=2, padx=1)
 
             # Arrow
-            tk.Label(row_f, text="→", font=("Consolas", 10),
+            tk.Label(row_f, text="→", font=("Consolas", 9),
                      fg=ACCENT_DIM, bg=BG_DARK).grid(row=0, column=3)
 
-            # Target note (editable)
-            entry = tk.Entry(row_f, font=("Consolas", 10, "bold"), width=5,
-                             bg=BG_PANEL, fg=ACCENT_YELLOW, insertbackground=ACCENT_YELLOW,
-                             borderwidth=1, relief="solid", justify="center")
-            entry.insert(0, midi_to_name(DEFAULT_NOTES[i]))
-            entry.grid(row=0, column=4, padx=2)
-            entry.bind("<Return>", lambda e, idx=i: self._apply_note_mapping(idx))
-            entry.bind("<FocusOut>", lambda e, idx=i: self._apply_note_mapping(idx))
-            self.target_entries.append(entry)
+            # 3 target note entries
+            beam_entries = []
+            for slot in range(NOTES_PER_BEAM):
+                entry = tk.Entry(row_f, font=("Consolas", 9, "bold"), width=4,
+                                 bg=BG_PANEL, fg=ACCENT_YELLOW if slot == 0 else ACCENT_DIM,
+                                 insertbackground=ACCENT_YELLOW,
+                                 borderwidth=1, relief="solid", justify="center")
+                if slot == 0:
+                    entry.insert(0, midi_to_name(DEFAULT_NOTES[i]))
+                entry.grid(row=0, column=4 + slot, padx=1)
+                entry.bind("<Return>", lambda e, bi=i, s=slot: self._apply_note_mapping(bi, s))
+                entry.bind("<FocusOut>", lambda e, bi=i, s=slot: self._apply_note_mapping(bi, s))
+                beam_entries.append(entry)
+            self.target_entries.append(beam_entries)
 
-        tk.Label(midi_frame, text="Enter / Tab to apply",
-                 font=("Consolas", 7), fg=ACCENT_DIM, bg=BG_DARK).pack(pady=(6, 0))
+        tk.Label(midi_frame, text="Enter / Tab to apply · empty = no note",
+                 font=("Consolas", 7), fg=ACCENT_DIM, bg=BG_DARK).pack(pady=(4, 0))
+
+        # ── Chord Presets ──
+        preset_frame = tk.Frame(midi_frame, bg=BG_DARK)
+        preset_frame.pack(fill="x", pady=(8, 0))
+
+        tk.Label(preset_frame, text="Preset:", font=("Consolas", 8),
+                 fg=FG_TEXT, bg=BG_DARK).pack(side="left")
+
+        self.chord_preset_combo = ttk.Combobox(preset_frame, font=("Consolas", 8),
+                                                width=14)
+        self.chord_preset_combo.pack(side="left", padx=(4, 4))
+        self.chord_preset_combo.bind("<<ComboboxSelected>>", self._load_chord_preset)
+
+        save_btn = tk.Button(preset_frame, text="Save", font=("Consolas", 8, "bold"),
+                             fg=ACCENT_GREEN, bg=BG_PANEL, borderwidth=0,
+                             cursor="hand2", command=self._save_chord_preset)
+        save_btn.pack(side="left", padx=2)
+        save_btn.bind("<Enter>", lambda e: save_btn.configure(bg=ACCENT_GREEN, fg="black"))
+        save_btn.bind("<Leave>", lambda e: save_btn.configure(bg=BG_PANEL, fg=ACCENT_GREEN))
+
+        del_btn = tk.Button(preset_frame, text="Del", font=("Consolas", 8, "bold"),
+                            fg=ACCENT_RED, bg=BG_PANEL, borderwidth=0,
+                            cursor="hand2", command=self._delete_chord_preset)
+        del_btn.pack(side="left", padx=2)
+        del_btn.bind("<Enter>", lambda e: del_btn.configure(bg=ACCENT_RED, fg="black"))
+        del_btn.bind("<Leave>", lambda e: del_btn.configure(bg=BG_PANEL, fg=ACCENT_RED))
+
+        self._refresh_chord_presets()
 
         # ── Status Bar (full width at bottom) ──
         status_frame = tk.Frame(outer, bg=BG_PANEL, padx=8, pady=5,
